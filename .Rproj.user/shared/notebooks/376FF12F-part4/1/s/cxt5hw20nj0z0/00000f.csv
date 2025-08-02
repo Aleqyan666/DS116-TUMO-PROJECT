@@ -1,0 +1,1 @@
+"0","merged_df$PresenceRatio <- round(as.integer(merged_df$PresenceRatio) / 100, 2)"

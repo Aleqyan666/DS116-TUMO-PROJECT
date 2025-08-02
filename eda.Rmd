@@ -1,0 +1,58 @@
+---
+title: "eda"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(readxl)
+```
+
+
+```{r}
+student_list <- read.("TUMO Yerevan Center Report_Students List_Table - Sheet1.xlsx")
+```
+
+```{r}
+str(student_list)
+```
+```{r}
+names(student_list)
+```
+
+```{r}
+student_list <- student_list %>%
+  mutate(RetentionBin = cut(RetentionByMonths,
+                            breaks = c(0, 6, 12, 18, 24, 30, 36, 42, 48, Inf),
+                            labels = c("0–6", "6–12", "12–18", "18-24", "24–30", "30-36", "36-42", "42-48", "48+"),
+                            right = TRUE))
+
+ggplot(student_list, aes(x = RetentionBin)) +
+  geom_bar(fill = "tomato", color = "black") +
+  labs(title = "Retention by Month Ranges",
+       x = "Retention Range (Months)",
+       y = "Count") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5, size = 10)
+  )
+```
+
+```{r}
+student_list <- student_list %>%
+  mutate(AgeBin = cut(Age,
+                      breaks = c(0, 18, 25, 35, 45, 55, 65, Inf),
+                      labels = c("0-18", "19-25", "26-35", "36-45", "46-55", "56-65", "65+"),
+                      right = TRUE))
+
+# Plot Age bins
+ggplot(student_list, aes(x = AgeBin)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  labs(title = "Count by Age Groups",
+       x = "Age Group",
+       y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+```
+

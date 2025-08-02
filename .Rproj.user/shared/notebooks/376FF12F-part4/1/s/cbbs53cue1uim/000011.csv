@@ -1,0 +1,7 @@
+"0","mosaicplot(outcome_matrix,"
+"0","           main = ""Mosaic Plot: Course Volume vs Performance Outcome"","
+"0","           color = TRUE,"
+"0","           xlab = ""Number of Courses Started"","
+"0","           ylab = ""Performance Outcome"","
+"0","           las = 1,          "
+"0","           cex.axis = 0.8) "

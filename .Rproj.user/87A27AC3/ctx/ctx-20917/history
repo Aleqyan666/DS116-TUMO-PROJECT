@@ -1,0 +1,512 @@
+axis.text = element_text(size = 10)
+)
+pairs(merged_df[, c("PresenceRatio", "task_rating")],
+main = "Scatterplot Matrix")
+spearman_cor_test_result <- cor.test(merged_df$PresenceRatio, merged_df$task_rating,
+method = "spearman", exact = FALSE, use = "complete.obs")
+spearman_cor_test_result
+pearson_cor_test_result <- cor.test(merged_df$PresenceRatio, merged_df$task_rating,
+method = "pearson", exact = FALSE, use = "complete.obs")
+pearson_cor_test_result
+p1 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(alpha = 0.6, color = "steelblue") +
+geom_smooth(method = "lm", se = TRUE, color = "darkred") +
+labs(title = "Pearson Correlation (Linear)",
+x = "Attendance Ratio",
+y = "Task Rating") +
+theme_minimal()
+# Spearman scatterplot with loess smooth (captures monotonic relationship)
+p2 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(alpha = 0.6, color = "darkgreen") +
+geom_smooth(method = "loess", se = TRUE, color = "forestgreen") +
+labs(title = "Spearman Correlation (Monotonic)",
+x = "Attendance Ratio",
+y = "Task Rating") +
+theme_minimal()
+p1 + p2
+course_outcomes <- merged_df %>%
+mutate(total_courses = Completed + Incomplete + Participated + Withdrawn) %>%
+pivot_longer(
+cols = c(Completed, Incomplete, Participated, Withdrawn),
+names_to = "Outcome",
+values_to = "Count"
+)
+course_outcomes <- course_outcomes %>%
+mutate(total_bin = cut(total_courses, breaks = c(0, 2, 5, 10, Inf),
+labels = c("1-2", "3-5", "6-10", "10+"), right = FALSE))
+ggplot(course_outcomes, aes(x = total_bin, y = Count, fill = Outcome)) +
+geom_bar(stat = "identity", position = "fill") +
+scale_y_continuous(labels = percent_format()) +
+labs(
+title = "Proportion of Course Outcomes by Number of Courses Started",
+x = "Total Number of Courses Started (Binned)",
+y = "Proportion of Outcomes",
+fill = "Outcome"
+) +
+theme_minimal()
+df <- merged_df %>%
+mutate(
+total_courses = Completed + Participated + Rejected + Withdrawn,
+course_volume_group = cut(
+total_courses,
+breaks = c(-Inf, 2, 5, 10, Inf),
+labels = c("1–2", "3–5", "6-10", "10+")
+)
+)
+outcome_table <- df %>%
+group_by(course_volume_group) %>%
+summarise(
+Completed = sum(Completed, na.rm = TRUE),
+Participated = sum(Participated, na.rm = TRUE),
+Failed = sum(Rejected, na.rm = TRUE),
+Withdrawn = sum(Withdrawn, na.rm = TRUE)
+)
+# matrix for chi-squared test
+outcome_matrix <- as.matrix(outcome_table[, -1])
+rownames(outcome_matrix) <- outcome_table$course_volume_group
+# Chi-square test
+chisq_result <- chisq.test(outcome_matrix)
+# Print results
+print(outcome_matrix)
+print(chisq_result)
+df <- merged_df %>%
+mutate(
+total_courses = Completed + Participated + Rejected + Withdrawn,
+course_volume_group = cut(
+total_courses,
+breaks = c(-Inf, 2, 5, 10, Inf),
+labels = c("1–2", "3–5", "6-10", "10+")
+)
+)
+outcome_table <- df %>%
+group_by(course_volume_group) %>%
+summarise(
+Completed = sum(Completed, na.rm = TRUE),
+Participated = sum(Participated, na.rm = TRUE),
+Failed = sum(Rejected, na.rm = TRUE),
+Withdrawn = sum(Withdrawn, na.rm = TRUE)
+)
+outcome_matrix <- as.matrix(outcome_table[, -1])
+rownames(outcome_matrix) <- outcome_table$course_volume_group
+chisq_result <- chisq.test(outcome_matrix)
+print(outcome_matrix)
+print(chisq_result)
+print(chisq_result)
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(patchwork)
+library(tidyr)
+library(scales)
+student_performance <- read.csv("TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+str(student_performance)
+student_info <- read.csv("TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
+str(student_info) #
+student_info$TumoID <- as.numeric(student_info$TumoID)
+options(scipen = 999)
+table(student_info$TumoID)
+student_performance$task_rating <- round(student_performance$Awarded /
+(student_performance$Awarded + student_performance$Rejected), 2)
+student_performance$training_rating <- round(student_performance$Completed /
+(student_performance$Incomplete + student_performance$Participated +
+student_performance$Withdrawn + student_performance$Completed), 2)
+str(student_performance)
+table(student_performance$task_rating)
+table(student_performance$training_rating)
+merged_df <- inner_join(student_info, student_performance, by = "TumoID")
+merged_df$PresenceRatio <- round(as.integer(merged_df$PresenceRatio) / 100, 2)
+ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point() +
+labs(
+title = "Task Rating vs Attendance Ratio",
+x = "Attendance (%)",
+y = "Task Rating (%)"
+) +
+scale_x_continuous(breaks = seq(0, 100, 10))
+ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(color = "steelblue", size = 2, alpha = 0.7) +                        # points
+geom_smooth(method = "lm", se = TRUE, color = "darkred", linewidth = 1) +       # trend line with CI
+labs(
+title = "Attendance vs Task Rating with Regression Trend Line",
+x = "Attendance Ratio",
+y = "Task Rating"
+) +
+scale_x_continuous(breaks = seq(0, 1, 0.1)) +                                  # ticks every 0.1
+theme_minimal() +
+theme(
+plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+axis.title = element_text(face = "bold", size = 12),
+axis.text = element_text(size = 10)
+)
+pairs(merged_df[, c("PresenceRatio", "task_rating")],
+main = "Scatterplot Matrix")
+spearman_cor_test_result <- cor.test(merged_df$PresenceRatio, merged_df$task_rating,
+method = "spearman", exact = FALSE, use = "complete.obs")
+spearman_cor_test_result
+pearson_cor_test_result <- cor.test(merged_df$PresenceRatio, merged_df$task_rating,
+method = "pearson", exact = FALSE, use = "complete.obs")
+pearson_cor_test_result
+p1 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(alpha = 0.6, color = "steelblue") +
+geom_smooth(method = "lm", se = TRUE, color = "darkred") +
+labs(title = "Pearson Correlation (Linear)",
+x = "Attendance Ratio",
+y = "Task Rating") +
+theme_minimal()
+# Spearman scatterplot with loess smooth (captures monotonic relationship)
+p2 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(alpha = 0.6, color = "darkgreen") +
+geom_smooth(method = "loess", se = TRUE, color = "forestgreen") +
+labs(title = "Spearman Correlation (Monotonic)",
+x = "Attendance Ratio",
+y = "Task Rating") +
+theme_minimal()
+p1 + p2
+course_outcomes <- merged_df %>%
+mutate(total_courses = Completed + Incomplete + Participated + Withdrawn) %>%
+pivot_longer(
+cols = c(Completed, Incomplete, Participated, Withdrawn),
+names_to = "Outcome",
+values_to = "Count"
+)
+course_outcomes <- course_outcomes %>%
+mutate(total_bin = cut(total_courses, breaks = c(0, 2, 5, 10, Inf),
+labels = c("1-2", "3-5", "6-10", "10+"), right = FALSE))
+ggplot(course_outcomes, aes(x = total_bin, y = Count, fill = Outcome)) +
+geom_bar(stat = "identity", position = "fill") +
+scale_y_continuous(labels = percent_format()) +
+labs(
+title = "Proportion of Course Outcomes by Number of Courses Started",
+x = "Total Number of Courses Started (Binned)",
+y = "Proportion of Outcomes",
+fill = "Outcome"
+) +
+theme_minimal()
+df <- merged_df %>%
+mutate(
+total_courses = Completed + Participated + Rejected + Withdrawn,
+course_volume_group = cut(
+total_courses,
+breaks = c(-Inf, 2, 5, 10, Inf),
+labels = c("1–2", "3–5", "6-10", "10+")
+)
+)
+outcome_table <- df %>%
+group_by(course_volume_group) %>%
+summarise(
+Completed = sum(Completed, na.rm = TRUE),
+Participated = sum(Participated, na.rm = TRUE),
+Failed = sum(Rejected, na.rm = TRUE),
+Withdrawn = sum(Withdrawn, na.rm = TRUE)
+)
+outcome_matrix <- as.matrix(outcome_table[, -1])
+rownames(outcome_matrix) <- outcome_table$course_volume_group
+chisq_result <- chisq.test(outcome_matrix)
+outcome_matrix
+chisq_result
+mosaicplot(outcome_matrix,
+main = "Mosaic Plot: Course Volume vs Performance Outcome",
+color = TRUE,
+xlab = "Number of Courses Started",
+ylab = "Performance Outcome",
+las = 1,           # make y-axis labels horizontal
+cex.axis = 0.8)
+install.packages('vcd')
+mosaic(outcome_matrix,
+shade = TRUE,
+legend = TRUE,
+labeling_args = list(set_varnames = c(
+Var1 = "Course Volume Group",
+Var2 = "Performance Outcome"
+)),
+main = "Mosaic Plot: Course Volume vs Performance Outcome")
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(patchwork)
+library(tidyr)
+library(scales)
+library(vcd)
+mosaic(outcome_matrix,
+shade = TRUE,
+legend = TRUE,
+labeling_args = list(set_varnames = c(
+Var1 = "Course Volume Group",
+Var2 = "Performance Outcome"
+)),
+main = "Mosaic Plot: Course Volume vs Performance Outcome")
+mosaicplot(outcome_matrix,
+main = "Mosaic Plot: Course Volume vs Performance Outcome",
+color = TRUE,
+xlab = "Number of Courses Started",
+ylab = "Performance Outcome",
+las = 1,           # make y-axis labels horizontal
+cex.axis = 0.8)
+mosaicplot(outcome_matrix,
+main = "Mosaic Plot: Course Volume vs Performance Outcome",
+color = TRUE,
+xlab = "Number of Courses Started",
+ylab = "Performance Outcome",
+las = 1,
+cex.axis = 0.8)
+p1 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(alpha = 0.6, color = "steelblue") +
+geom_smooth(method = "lm", se = TRUE, color = "darkred") +
+labs(title = "Pearson Correlation (Linear)",
+x = "Attendance Ratio",
+y = "Task Rating") +
+theme_minimal()
+# Spearman scatterplot with loess smooth (captures monotonic relationship)
+p2 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(alpha = 0.6, color = "darkgreen") +
+geom_smooth(method = "loess", se = TRUE, color = "forestgreen") +
+labs(title = "Spearman Correlation (Monotonic)",
+x = "Attendance Ratio",
+y = "Task Rating") +
+theme_minimal()
+p1 + p2
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(patchwork)
+library(tidyr)
+library(scales)
+library(vcd)
+student_performance <- read.csv("TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+str(student_performance)
+student_info <- read.csv("TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
+str(student_info) #
+student_info$TumoID <- as.numeric(student_info$TumoID)
+options(scipen = 999)
+table(student_info$TumoID)
+student_performance$task_rating <- round(student_performance$Awarded /
+(student_performance$Awarded + student_performance$Rejected), 2)
+student_performance$training_rating <- round(student_performance$Completed /
+(student_performance$Incomplete + student_performance$Participated +
+student_performance$Withdrawn + student_performance$Completed), 2)
+str(student_performance)
+table(student_performance$task_rating)
+table(student_performance$training_rating)
+merged_df <- inner_join(student_info, student_performance, by = "TumoID")
+merged_df$PresenceRatio <- round(as.integer(merged_df$PresenceRatio) / 100, 2)
+ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point() +
+labs(
+title = "Task Rating vs Attendance Ratio",
+x = "Attendance (%)",
+y = "Task Rating (%)"
+) +
+scale_x_continuous(breaks = seq(0, 100, 10))
+ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(color = "steelblue", size = 2, alpha = 0.7) +                        # points
+geom_smooth(method = "lm", se = TRUE, color = "darkred", linewidth = 1) +       # trend line with CI
+labs(
+title = "Attendance vs Task Rating with Regression Trend Line",
+x = "Attendance Ratio",
+y = "Task Rating"
+) +
+scale_x_continuous(breaks = seq(0, 1, 0.1)) +                                  # ticks every 0.1
+theme_minimal() +
+theme(
+plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+axis.title = element_text(face = "bold", size = 12),
+axis.text = element_text(size = 10)
+)
+pairs(merged_df[, c("PresenceRatio", "task_rating")],
+main = "Scatterplot Matrix")
+spearman_cor_test_result <- cor.test(merged_df$PresenceRatio, merged_df$task_rating,
+method = "spearman", exact = FALSE, use = "complete.obs")
+spearman_cor_test_result
+pearson_cor_test_result <- cor.test(merged_df$PresenceRatio, merged_df$task_rating,
+method = "pearson", exact = FALSE, use = "complete.obs")
+pearson_cor_test_result
+p1 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(alpha = 0.6, color = "steelblue") +
+geom_smooth(method = "lm", se = TRUE, color = "darkred") +
+labs(title = "Pearson Correlation (Linear)",
+x = "Attendance Ratio",
+y = "Task Rating") +
+theme_minimal()
+# Spearman scatterplot with loess smooth (captures monotonic relationship)
+p2 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(alpha = 0.6, color = "darkgreen") +
+geom_smooth(method = "loess", se = TRUE, color = "forestgreen") +
+labs(title = "Spearman Correlation (Monotonic)",
+x = "Attendance Ratio",
+y = "Task Rating") +
+theme_minimal()
+p1 + p2
+course_outcomes <- merged_df %>%
+mutate(total_courses = Completed + Incomplete + Participated + Withdrawn) %>%
+pivot_longer(
+cols = c(Completed, Incomplete, Participated, Withdrawn),
+names_to = "Outcome",
+values_to = "Count"
+)
+course_outcomes <- course_outcomes %>%
+mutate(total_bin = cut(total_courses, breaks = c(0, 2, 5, 10, Inf),
+labels = c("1-2", "3-5", "6-10", "10+"), right = FALSE))
+ggplot(course_outcomes, aes(x = total_bin, y = Count, fill = Outcome)) +
+geom_bar(stat = "identity", position = "fill") +
+scale_y_continuous(labels = percent_format()) +
+labs(
+title = "Proportion of Course Outcomes by Number of Courses Started",
+x = "Total Number of Courses Started (Binned)",
+y = "Proportion of Outcomes",
+fill = "Outcome"
+) +
+theme_minimal()
+df <- merged_df %>%
+mutate(
+total_courses = Completed + Participated + Rejected + Withdrawn,
+course_volume_group = cut(
+total_courses,
+breaks = c(-Inf, 2, 5, 10, Inf),
+labels = c("1–2", "3–5", "6-10", "10+")
+)
+)
+outcome_table <- df %>%
+group_by(course_volume_group) %>%
+summarise(
+Completed = sum(Completed, na.rm = TRUE),
+Participated = sum(Participated, na.rm = TRUE),
+Failed = sum(Rejected, na.rm = TRUE),
+Withdrawn = sum(Withdrawn, na.rm = TRUE)
+)
+outcome_matrix <- as.matrix(outcome_table[, -1])
+rownames(outcome_matrix) <- outcome_table$course_volume_group
+chisq_result <- chisq.test(outcome_matrix)
+outcome_matrix
+chisq_result
+mosaicplot(outcome_matrix,
+main = "Mosaic Plot: Course Volume vs Performance Outcome",
+color = TRUE,
+xlab = "Number of Courses Started",
+ylab = "Performance Outcome",
+las = 1,
+cex.axis = 0.8)
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(patchwork)
+library(tidyr)
+library(scales)
+library(vcd)
+student_performance <- read.csv("TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+str(student_performance)
+student_info <- read.csv("TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
+str(student_info) #
+student_info$TumoID <- as.numeric(student_info$TumoID)
+options(scipen = 999)
+#table(student_info$TumoID)
+student_performance$task_rating <- round(student_performance$Awarded /
+(student_performance$Awarded + student_performance$Rejected), 2)
+student_performance$training_rating <- round(student_performance$Completed /
+(student_performance$Incomplete + student_performance$Participated +
+student_performance$Withdrawn + student_performance$Completed), 2)
+str(student_performance)
+table(student_performance$task_rating)
+table(student_performance$training_rating)
+merged_df <- inner_join(student_info, student_performance, by = "TumoID")
+merged_df$PresenceRatio <- round(as.integer(merged_df$PresenceRatio) / 100, 2)
+ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point() +
+labs(
+title = "Task Rating vs Attendance Ratio",
+x = "Attendance (%)",
+y = "Task Rating (%)"
+) +
+scale_x_continuous(breaks = seq(0, 100, 10))
+ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(color = "steelblue", size = 2, alpha = 0.7) +                        # points
+geom_smooth(method = "lm", se = TRUE, color = "darkred", linewidth = 1) +       # trend line with CI
+labs(
+title = "Attendance vs Task Rating with Regression Trend Line",
+x = "Attendance Ratio",
+y = "Task Rating"
+) +
+scale_x_continuous(breaks = seq(0, 1, 0.1)) +                                  # ticks every 0.1
+theme_minimal() +
+theme(
+plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+axis.title = element_text(face = "bold", size = 12),
+axis.text = element_text(size = 10)
+)
+pairs(merged_df[, c("PresenceRatio", "task_rating")],
+main = "Scatterplot Matrix")
+spearman_cor_test_result <- cor.test(merged_df$PresenceRatio, merged_df$task_rating,
+method = "spearman", exact = FALSE, use = "complete.obs")
+spearman_cor_test_result
+pearson_cor_test_result <- cor.test(merged_df$PresenceRatio, merged_df$task_rating,
+method = "pearson", exact = FALSE, use = "complete.obs")
+pearson_cor_test_result
+p1 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(alpha = 0.6, color = "steelblue") +
+geom_smooth(method = "lm", se = TRUE, color = "darkred") +
+labs(title = "Pearson Correlation (Linear)",
+x = "Attendance Ratio",
+y = "Task Rating") +
+theme_minimal()
+# Spearman scatterplot with loess smooth (captures monotonic relationship)
+p2 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+geom_point(alpha = 0.6, color = "darkgreen") +
+geom_smooth(method = "loess", se = TRUE, color = "forestgreen") +
+labs(title = "Spearman Correlation (Monotonic)",
+x = "Attendance Ratio",
+y = "Task Rating") +
+theme_minimal()
+p1 + p2
+course_outcomes <- merged_df %>%
+mutate(total_courses = Completed + Incomplete + Participated + Withdrawn) %>%
+pivot_longer(
+cols = c(Completed, Incomplete, Participated, Withdrawn),
+names_to = "Outcome",
+values_to = "Count"
+)
+course_outcomes <- course_outcomes %>%
+mutate(total_bin = cut(total_courses, breaks = c(0, 2, 5, 10, Inf),
+labels = c("1-2", "3-5", "6-10", "10+"), right = FALSE))
+ggplot(course_outcomes, aes(x = total_bin, y = Count, fill = Outcome)) +
+geom_bar(stat = "identity", position = "fill") +
+scale_y_continuous(labels = percent_format()) +
+labs(
+title = "Proportion of Course Outcomes by Number of Courses Started",
+x = "Total Number of Courses Started (Binned)",
+y = "Proportion of Outcomes",
+fill = "Outcome"
+) +
+theme_minimal()
+df <- merged_df %>%
+mutate(
+total_courses = Completed + Participated + Rejected + Withdrawn,
+course_volume_group = cut(
+total_courses,
+breaks = c(-Inf, 2, 5, 10, Inf),
+labels = c("1–2", "3–5", "6-10", "10+")
+)
+)
+outcome_table <- df %>%
+group_by(course_volume_group) %>%
+summarise(
+Completed = sum(Completed, na.rm = TRUE),
+Participated = sum(Participated, na.rm = TRUE),
+Failed = sum(Rejected, na.rm = TRUE),
+Withdrawn = sum(Withdrawn, na.rm = TRUE)
+)
+outcome_matrix <- as.matrix(outcome_table[, -1])
+rownames(outcome_matrix) <- outcome_table$course_volume_group
+chisq_result <- chisq.test(outcome_matrix)
+outcome_matrix
+chisq_result
+mosaicplot(outcome_matrix,
+main = "Mosaic Plot: Course Volume vs Performance Outcome",
+color = TRUE,
+xlab = "Number of Courses Started",
+ylab = "Performance Outcome",
+las = 1,
+cex.axis = 0.8)
+install.packages("tinytex")
+install.packages("tinytex")
+tinytex::install_tinytex()
+install.packages("tinytex")
+tinytex::install_tinytex()

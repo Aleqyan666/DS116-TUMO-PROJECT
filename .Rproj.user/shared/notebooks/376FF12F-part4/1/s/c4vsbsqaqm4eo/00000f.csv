@@ -1,0 +1,3 @@
+"0","outcome_matrix <- as.matrix(outcome_table[, -1])"
+"0","rownames(outcome_matrix) <- outcome_table$course_volume_group"
+"0","chisq_result <- chisq.test(outcome_matrix)"

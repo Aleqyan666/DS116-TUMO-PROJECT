@@ -1,0 +1,6 @@
+"0","merged_df$main_outcome_group <- case_when("
+"0","  merged_df$Withdrawn > 0 ~ ""Withdrawn"","
+"0","  merged_df$Completed > 0 ~ ""Completed"","
+"0","  merged_df$Rejected > 0 ~ ""Failed"","
+"0","  TRUE ~ ""Other"""
+"0",")"

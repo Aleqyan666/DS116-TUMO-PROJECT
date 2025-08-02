@@ -1,0 +1,5 @@
+"0","ggplot(demo, aes(x=Age)) +"
+"0","  geom_histogram(binwidth=1, fill=""#619CFF"", color=""white"") +"
+"0","  labs(title=""Age Distribution of TUMO Students"","
+"0","       x=""Age (years)"", y=""Count"") +"
+"0","  theme_minimal()"
