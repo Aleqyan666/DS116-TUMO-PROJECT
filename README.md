@@ -11,6 +11,18 @@ To evaluate and visualize **how TUMO students engage with workshops**, how their
 - How **attendance** and **course participation** cluster students into different engagement profiles
 - Whether **interests vary by location**, and what factors influence **longer engagement**
 
+## Project Structure
+
+- **`Data/`**: Contains all datasets used for the analysis.
+- **`Shiny/`**: Contains the R scripts used in the project.
+- **`report/`**: The R Markdown report file (`.Rmd`) and its rendered outputs (PDF/HTML).
+- **`presentation/`**: Slide decks or visual summaries (PDF/PPT).
+- **`TUMO_Project.Rproj`**: RStudio project file to ensure smooth project loading.
+- **`METADATA.md`**: Provides detailed descriptions of the datasets used, including sources, variables, and data structure.
+- **`EDA/`**: Contains R Markdown (`.Rmd`) files for performing comprehensive Exploratory Data Analysis (EDA), including data cleaning, feature engineering, univariate and multivariate analysis, visualizations, and summary statistics.
+
+---
+
 ## Team Members
 
 - Gor Harutunyan
