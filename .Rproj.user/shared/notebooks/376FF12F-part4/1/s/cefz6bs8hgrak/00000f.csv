@@ -1,7 +1,0 @@
-"0","course_outcomes <- merged_df %>%"
-"0","  mutate(total_courses = Completed + Incomplete + Participated + Withdrawn) %>%"
-"0","  pivot_longer("
-"0","    cols = c(Completed, Incomplete, Participated, Withdrawn),"
-"0","    names_to = ""Outcome"","
-"0","    values_to = ""Count"""
-"0","  )"

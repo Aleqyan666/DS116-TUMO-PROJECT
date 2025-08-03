@@ -1,7 +1,0 @@
-"0","df_numeric <- merged_df %>%"
-"0","  select(where(is.numeric)) %>%"
-"0","  na.omit()"
-"0",""
-"0","groups <- merged_df %>%"
-"0","  filter(complete.cases(select(., where(is.numeric)))) %>%"
-"0","  pull(main_outcome_group)"

@@ -1,7 +1,0 @@
-"0","withdraw_counts <- merged_df %>%"
-"0","  filter(PassStatus == ""Withdrawn"", !is.na(WithdrawDate)) %>%"
-"0","  mutate(WithdrawDate = parse_date_time(WithdrawDate, orders = c(""d-b-y HMS"", ""B d, Y, I:M:S p"")),"
-"0","         Month = month(WithdrawDate, label = TRUE)) %>%"
-"0","  count(Month) %>%"
-"0","  arrange(desc(n))"
-"0","print(withdraw_counts)"

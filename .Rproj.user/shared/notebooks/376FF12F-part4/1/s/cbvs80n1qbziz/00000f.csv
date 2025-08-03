@@ -1,4 +1,0 @@
-"0","pca_result <- prcomp(df_numeric, center = TRUE, scale. = TRUE)"
-"0",""
-"0","pca_df <- as.data.frame(pca_result$x)"
-"0","pca_df$Group <- groups"

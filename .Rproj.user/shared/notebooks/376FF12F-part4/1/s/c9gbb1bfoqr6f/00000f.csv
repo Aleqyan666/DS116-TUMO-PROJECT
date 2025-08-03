@@ -1,6 +1,0 @@
-"0","student_performance$task_rating <- round(student_performance$Awarded / "
-"0","      (student_performance$Awarded + student_performance$Rejected), 2)"
-"0",""
-"0","student_performance$training_rating <- round(student_performance$Completed / "
-"0","      (student_performance$Incomplete + student_performance$Participated +       "
-"0","         student_performance$Withdrawn + student_performance$Completed), 2)"

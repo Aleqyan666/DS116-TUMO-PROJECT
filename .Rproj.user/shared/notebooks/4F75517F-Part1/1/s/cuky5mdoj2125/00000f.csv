@@ -1,6 +1,0 @@
-"0",""
-"0","# Conclusion: A/B Test — Mean Age of T vs. U"
-"0",""
-"0","cat(""The t-test comparing mean ages of T (~12.8) vs. U (~13.1) yields p < 0.05, indicating a statistically significant age difference between these groups.\n"")"
-"1","The t-test comparing mean ages of T (~12.8) vs. U (~13.1) yields p < 0.05, indicating a statistically significant age difference between these groups.
-"

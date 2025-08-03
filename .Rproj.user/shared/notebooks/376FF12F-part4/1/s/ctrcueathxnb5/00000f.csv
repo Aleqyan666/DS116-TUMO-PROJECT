@@ -1,2 +1,0 @@
-"0","student_info$TumoID <- as.numeric(student_info$TumoID)"
-"0","options(scipen = 999) "
