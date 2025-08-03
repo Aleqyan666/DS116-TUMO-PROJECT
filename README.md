@@ -1,4 +1,4 @@
-# Student Engagement and Performance Segmentation at TUMO
+# Data-Driven Insights into Student Behavior and Performance at TUMO
 
 This project presents a **learning analytics framework** to explore student behavior, performance, and engagement at the [TUMO Center for Creative Technologies](https://tumo.org/). By integrating and analyzing multiple sources of student data, we aim to uncover meaningful patterns that can support evidence-based decisions to improve student outcomes.
 
@@ -127,3 +127,6 @@ To run the project:
 1. Clone the repo:
 ```bash
 git clone https://github.com/Aleqyan666/DS116-TUMO-PROJECT.git
+```
+2. Run `Shiny/app.R` file. OR
+3. Visit the shinyapps.io Dashboard [here](https://aleqyan666.shinyapps.io/TUMO_Dashbaord_final/)
