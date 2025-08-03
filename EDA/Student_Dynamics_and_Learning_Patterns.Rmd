@@ -23,7 +23,6 @@ load_libraries(libs)
 ```
 
 ```{r, include=FALSE}
-
 perf <- read_csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
 who <- read_csv("../Data/TUMO Yerevan Center Report_Who Passed What_Table - Sheet1.csv")
 list_df <- read_csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")

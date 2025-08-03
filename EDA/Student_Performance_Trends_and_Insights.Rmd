@@ -19,25 +19,19 @@ knitr::opts_chunk$set(
   fig.height = 5,
   dpi = 150
 )
-library(readr)
-library(readxl)
-library(stringr)
-library(dplyr)
-library(ggplot2)
-library(ggridges)
-library(ggalluvial)
-library(patchwork)
-library(scales)
-library(viridis)
-library(ggbeeswarm)
-library(rstatix)
-library(ggrepel)
-library(janitor)
-library(broom)
-library(lubridate)
-library(tidyr)
-library(rstatix)
-library(forcats)
+
+libs<-c(
+  "readr", "readxl", "stringr", "dplyr", "ggplot2", "ggridges", 
+  "ggalluvial", "patchwork", "scales", "viridis", "ggbeeswarm", 
+  "ggrepel", "janitor", "broom", "lubridate", "tidyr", 
+  "forcats"
+)
+load_libraries<-function(libs){
+new_libs <- libs[!(libs %in% installed.packages()[,"Package"])]
+if(length(new_libs)>0) {install.packages(new_libs)}
+lapply(libs, library, character.only = TRUE)
+}
+load_libraries(libs)
 ```
 
 ```{r data, include=FALSE}
