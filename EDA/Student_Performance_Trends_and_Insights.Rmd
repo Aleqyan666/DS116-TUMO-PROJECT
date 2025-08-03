@@ -1,0 +1,401 @@
+---
+title: "Performance Trends & Insights"
+author: "Aram Barkhudaryan"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    fig_caption: true
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 8,
+  fig.height = 5,
+  dpi = 150
+)
+library(readr)
+library(readxl)
+library(stringr)
+library(dplyr)
+library(ggplot2)
+library(ggridges)
+library(ggalluvial)
+library(patchwork)
+library(scales)
+library(viridis)
+library(ggbeeswarm)
+library(rstatix)
+library(ggrepel)
+library(janitor)
+library(broom)
+library(lubridate)
+library(tidyr)
+library(rstatix)
+library(forcats)
+```
+
+```{r data, include=FALSE}
+students_list <- read_csv("TUMO Yerevan Center Report_Students List_Table - Sheet1.csv") %>% clean_names()
+passed_what <- read_csv("TUMO Yerevan Center Report_Who Passed What_Table - Sheet1.csv") %>% clean_names()
+workshops <- read_csv("TUMO Armenia Center Report_Workshops Statistics_Table.csv") %>% clean_names()
+performance <- read_csv("TUMO Yerevan_Students Performance_Table - Sheet1.csv") %>% clean_names()
+```
+
+```{r}
+# Classification ordering with NA as lowest
+classification_order <- c("None", "T", "U", "M", "O")
+
+students_list <- students_list %>%
+  mutate(
+    classification = fct_explicit_na(classification, na_level = "None"),
+    classification = factor(classification, levels = classification_order, ordered = TRUE)
+  )
+
+performance <- performance %>%
+  mutate(
+    classification = fct_explicit_na(classification, na_level = "None"),
+    classification = factor(classification, levels = classification_order, ordered = TRUE)
+  )
+
+# Age groups
+age_breaks <- c(0, 12, 15, 18, 21, 25, Inf)
+age_labels <- c("<13", "13-14", "15-17", "18-20", "21-24", "25+")
+students_list <- students_list %>%
+  mutate(age_group = cut(age, breaks = age_breaks, labels = age_labels, right = FALSE))
+
+performance <- performance %>%
+  mutate(age_group = cut(age, breaks = age_breaks, labels = age_labels, right = FALSE))
+
+# Normalize status
+normalize_status <- function(x) {
+  case_when(
+    tolower(x) %in% c("active") ~ "Active",
+    tolower(x) %in% c("freeze") ~ "Freeze",
+    tolower(x) %in% c("preclosed") ~ "Preclosed",
+    tolower(x) %in% c("suspend") ~ "Suspend",
+    TRUE ~ x
+  )
+}
+students_list <- students_list %>% mutate(status = normalize_status(status))
+performance <- performance %>% mutate(status = normalize_status(status))
+passed_what <- passed_what %>% rename(status = user_status) %>% mutate(status = normalize_status(status))
+
+# Workshop pass status normalize
+workshops <- workshops %>%
+  clean_names() %>%
+  mutate(
+    pass_status_norm = case_when(
+      tolower(coalesce(pass_status, "")) %in% c("complete", "completed") ~ "Completed",
+      tolower(coalesce(pass_status, "")) %in% c("incomplete") ~ "Incomplete",
+      tolower(coalesce(pass_status, "")) %in% c("withdrawn", "withdraw") ~ "Withdrawn",
+      tolower(coalesce(pass_status, "")) %in% c("participated") ~ "Participated",
+      TRUE ~ pass_status
+    ),
+    start_date_parsed = parse_date_time(start_date, orders = c("d-b-Y", "d-m-y", "mdy", "ymd", "BdY")),
+    end_date_parsed = parse_date_time(end_date, orders = c("d-b-Y", "d-m-y", "mdy", "ymd", "BdY"))
+  )
+```
+
+```{r gender, include=FALSE}
+gender_lookup <- workshops %>%
+  filter(!is.na(gender)) %>%
+  mutate(ordering_date = start_date_parsed) %>%
+  arrange(tumo_id, desc(ordering_date)) %>%
+  group_by(tumo_id) %>%
+  slice_head(n = 1) %>%
+  ungroup() %>%
+  select(tumo_id, gender = gender)
+
+# Build master student-level table
+master_df <- students_list %>%
+  select(tumo_id, classification, status, age, age_group, retention_grouped, present, presence_ratio, attending_since) %>%
+  left_join(performance %>% select(tumo_id, awarded, rejected, completed, incomplete, participated, withdrawn, learning_labs_completed), by = "tumo_id") %>%
+  left_join(passed_what %>% select(tumo_id, all_selection, selection_1:selection_4, session), by = "tumo_id") %>%
+  left_join(gender_lookup, by = "tumo_id") %>%
+  mutate(
+    gender = factor(gender, levels = c("Male", "Female")),
+    # Derived performance ratios
+    completion_rate = if_else((completed + incomplete + withdrawn) > 0,
+                              completed / (completed + incomplete + withdrawn), NA_real_),
+    failure_rate = if_else((awarded + rejected) > 0,
+                           rejected / (awarded + rejected), NA_real_),
+    starred_completion = NA_real_  # placeholder, will adjust later with workshop-level stars
+  )
+```
+
+```{r star, include=FALSE}
+# Create a student-level weighted completion: count completed + 0.5*starred among their workshops
+star_weights <- workshops %>%
+  mutate(
+    completed_flag = if_else(pass_status == "Completed", 1, 0),
+    star_flag = if_else(tolower(star) %in% c("true", "TRUE", "True", "1"), 1, 0),
+    weighted = completed_flag + 0.5 * star_flag
+  ) %>%
+  group_by(tumo_id) %>%
+  summarise(
+    total_workshops = n(),
+    raw_completions = sum(completed_flag),
+    starred_bonus = sum(0.5 * star_flag),
+    weighted_completion_score = sum(weighted),
+    .groups = "drop"
+  )
+
+master_df <- master_df %>%
+  left_join(star_weights, by = "tumo_id") %>%
+  mutate(
+    weighted_completion_score = replace_na(weighted_completion_score, 0)
+  )
+master_df <- master_df %>%
+  mutate(
+    presence_ratio_num = as.numeric(presence_ratio) / 100
+  )
+```
+
+```{r plot1, include=TRUE}
+ggplot(master_df %>% filter(!is.na(presence_ratio_num)), 
+       aes(x = presence_ratio_num, y = 1, fill = gender)) +
+  ggridges::geom_density_ridges(alpha = 0.8, scale = 1.1) +
+  facet_grid(gender ~ classification) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Engagement (Presence Ratio) by Gender and Classification",
+    x = "Presence Ratio",
+    y = NULL,
+    fill = "Gender"
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), limits = c(0,1)) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+```{r plot2, include=TRUE}
+counts_df <- master_df %>%
+  filter(!is.na(weighted_completion_score), !is.na(gender), !is.na(age_group)) %>%
+  group_by(age_group, gender) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  mutate(label = paste0("n=", n))
+
+# Main plot
+ggplot(master_df %>% filter(!is.na(weighted_completion_score), !is.na(gender), !is.na(age_group)),
+       aes(x = gender, y = weighted_completion_score, fill = gender)) +
+  geom_violin(alpha = 0.2, width = 0.9, color = NA, trim = TRUE) +
+  ggbeeswarm::geom_quasirandom(
+    width = 0.3,
+    alpha = 0.6,
+    size = 2,
+    shape = 21,
+    stroke = 0.3,
+    color = "black",
+    dodge.width = 0.5
+  ) +
+  stat_summary(
+    fun = median,
+    geom = "point",
+    shape = 23,
+    size = 4,
+    fill = "black",
+    color = "white",
+    position = position_nudge(x = 0)
+  ) +
+  facet_wrap(~ age_group, ncol = 3, scales = "free_y") +
+  scale_fill_viridis_d(option = "plasma", guide = FALSE) +
+  theme_minimal(base_size = 13) +
+  labs(
+    title = "Weighted Completion Score by Gender and Age Group",
+    x = "Gender",
+    y = "Weighted Completion (Completed + 0.5★)"
+  ) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(size = 12),
+    panel.spacing = unit(0.8, "lines")
+  ) +
+  # big, bold count labels just below x-axis
+  geom_text(
+    data = counts_df,
+    aes(x = gender, y = -0.1 * max(master_df$weighted_completion_score, na.rm = TRUE), label = label),
+    inherit.aes = FALSE,
+    size = 3,
+    fontface = "bold",
+    vjust = 1,
+    color = "black"
+  ) +
+  coord_cartesian(clip = "off")  # allow labels outside plot area
+```
+
+```{r plot3, include=TRUE}
+# Define a simplified outcome for students based on their workshop summary
+master_df <- master_df %>%
+  mutate(
+    outcome_category = case_when(
+      completion_rate >= 0.8 ~ "High Completion",
+      completion_rate >= 0.4 ~ "Medium Completion",
+      completion_rate < 0.4 & !is.na(completion_rate) ~ "Low Completion",
+      TRUE ~ "No Data"
+    )
+  )
+
+heat_df <- master_df %>%
+  filter(!is.na(gender), !is.na(age_group), !is.na(classification)) %>%
+  count(gender, age_group, classification, outcome_category) %>%
+  group_by(gender, age_group, classification) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup()
+
+ggplot(heat_df %>% filter(outcome_category != "No Data"), 
+       aes(x = age_group, y = classification, fill = prop)) +
+  geom_tile(color = "white") +
+  facet_grid(gender ~ outcome_category) +
+  scale_fill_viridis_c(labels = percent_format(1)) +
+  labs(
+    title = "Completion-level Outcome Proportions by Gender, Age, and Classification",
+    x = "Age Group",
+    y = "Classification",
+    fill = "Proportion"
+  ) +
+  theme_minimal(base_size = 12)
+```
+
+```{r plot4, include=TRUE}
+retention_levels <- c("0 Month", "0.1 - 0.5 Year", "0.5 - 1 Year", 
+                      "1 - 1.5 Year", "1.5 - 2 Year", "2 - 2.5 Year", 
+                      "2.5 - 3 Year", "3+ Year")
+master_df <- master_df %>%
+  mutate(
+    retention_grouped = factor(retention_grouped, levels = retention_levels, ordered = TRUE),
+    classification = fct_explicit_na(classification, na_level = "None")  # ensure no NA blanks
+  )
+
+# Build alluvial data, optionally filter to flows above a threshold to reduce noise
+alluvial_df <- master_df %>%
+  filter(!is.na(gender), !is.na(classification), !is.na(retention_grouped)) %>%
+  count(gender, classification, retention_grouped, name = "n") %>%
+  group_by(gender) %>%
+  mutate(pct_within_gender = n / sum(n)) %>%
+  ungroup() %>%
+  filter(pct_within_gender >= 0.005)
+
+# Stratum labels with counts for annotation
+stratum_labels <- alluvial_df %>%
+  group_by(axis = "gender", x = gender) %>%
+  summarise(n = sum(n), .groups = "drop") %>% 
+  mutate(label = paste0(x, "\nN=", n))
+
+# Plot
+ggplot(alluvial_df,
+       aes(axis1 = gender, axis2 = classification, axis3 = retention_grouped, y = n)) +
+  # flows
+  geom_alluvium(aes(fill = classification), width = 0.15, alpha = 0.8) +
+  # boxes
+  geom_stratum(width = 0.15, color = "black", fill = "white") +
+  # labels on strata
+  geom_label(stat = "stratum",
+             aes(label = after_stat(stratum)),
+             size = 2.1,
+             fill = "white",
+             label.size = 0.2) +
+  scale_x_discrete(
+    labels = c("Gender", "Classification", "Retention Group"),
+    expand = c(0.05, 0.05)
+  ) +
+  scale_y_continuous(
+    name = "Number of Students",
+    breaks = scales::pretty_breaks(n = 8),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
+  scale_fill_viridis_d(option = "plasma", name = "Classification") +
+  labs(
+    title = "Flow of Students: Gender → Classification → Retention Group",
+    y = "Number of Students"
+  ) +
+  theme_minimal(base_size = 10)+
+  theme(
+    axis.title.x = element_blank(),
+    panel.grid.major.y = element_line(color = "grey90"),
+    legend.position = "right"
+  ) +
+  guides(fill = guide_legend(title.position = "top"))
+```
+
+
+```{r tests, include=F}
+eligible_age_groups <- master_df %>%
+  filter(!is.na(gender), !is.na(age_group), !is.na(weighted_completion_score)) %>%
+  group_by(age_group, gender) %>%
+  summarise(
+    n = n(),
+    unique_vals = n_distinct(weighted_completion_score),
+    .groups = "drop"
+  ) %>%
+  filter(n >= 2, unique_vals >= 2) %>%
+  group_by(age_group) %>%
+  filter(n() == 2) %>%  # both genders pass criteria
+  pull(age_group) %>%
+  unique()
+
+# Run Wilcoxon test for those age groups
+tests <- master_df %>%
+  filter(
+    !is.na(gender),
+    !is.na(age_group),
+    !is.na(weighted_completion_score),
+    age_group %in% eligible_age_groups
+  ) %>%
+  group_by(age_group) %>%
+  wilcox_test(weighted_completion_score ~ gender) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance()
+
+tests
+```
+
+```{r chisq, include=F}
+cont_table <- master_df %>%
+  mutate(withdrawn_flag = if_else(withdrawn > 0, "Yes", "No")) %>%
+  count(classification, withdrawn_flag) %>%
+  pivot_wider(names_from = withdrawn_flag, values_from = n, values_fill = 0)
+
+# Chi-squared
+chisq <- master_df %>%
+  mutate(withdrawn_flag = if_else(withdrawn > 0, "Yes", "No")) %>%
+  select(classification, withdrawn_flag) %>%
+  table() %>%
+  chisq.test()
+
+chisq
+```
+
+```{r summary, include=FALSE}
+# Baseline completion (weighted)
+baseline_completion <- master_df %>%
+  summarise(med_completion = median(weighted_completion_score, na.rm = TRUE))
+
+# Compute deviations by subgroup
+subgroup_summary <- master_df %>%
+  filter(!is.na(gender), !is.na(classification)) %>%
+  group_by(gender, classification) %>%
+  summarise(
+    median_weighted = median(weighted_completion_score, na.rm = TRUE),
+    avg_presence = mean(presence_ratio, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    comp_gap = median_weighted - baseline_completion$med_completion
+  ) %>%
+  arrange(desc(abs(comp_gap)))
+
+# Top disparities
+subgroup_summary %>% slice_max(abs(comp_gap), n = 10)
+```

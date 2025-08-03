@@ -1,0 +1,308 @@
+---
+title: "Student Engagement and Performance Segmentation"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,        
+  warning = FALSE,     
+  message = FALSE,     
+  error = FALSE,       
+  fig.align = "center",
+  fig.width = 7,
+  fig.height = 5
+)
+
+libs<-c("ggplot2", "dplyr", "corrplot", "patchwork", "patchwork", "tidyr", "scales", "vcd")
+load_libraries<-function(libs){
+new_libs <- libs[!(libs %in% installed.packages()[,"Package"])]
+if(length(new_libs)>0) {install.packages(new_libs)}
+lapply(libs, library, character.only = TRUE)
+}
+load_libraries(libs)
+```
+
+
+
+```{r}
+student_performance <- read.csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+```
+
+```{r}
+str(student_performance)
+```
+
+```{r}
+student_info <- read.csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
+str(student_info) # 
+```
+
+```{r}
+student_info$TumoID <- as.numeric(student_info$TumoID)
+options(scipen = 999) 
+```
+
+```{r}
+student_performance$task_rating <- round(student_performance$Awarded / 
+      (student_performance$Awarded + student_performance$Rejected), 2)
+
+student_performance$training_rating <- round(student_performance$Completed / 
+      (student_performance$Incomplete + student_performance$Participated +       
+         student_performance$Withdrawn + student_performance$Completed), 2)
+```
+
+```{r}
+str(student_performance)
+```
+
+```{r}
+table(student_performance$task_rating)
+```
+
+```{r}
+table(student_performance$training_rating)
+```
+
+# Hypothesis 1: Attendance correlates with student performance
+
+**Assumption:** Students with higher attendance are more likely to perform better (complete courses) compared to students with low attendance.
+
+**Rationale:** Students who are actively attending classes may engage more with the material, leading to better performance.
+
+
+```{r}
+merged_df <- inner_join(student_info, student_performance, by = "TumoID")
+```
+
+```{r}
+merged_df$PresenceRatio <- round(as.integer(merged_df$PresenceRatio) / 100, 2)
+```
+
+```{r}
+ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+  geom_point() +
+  labs(
+    title = "Task Rating vs Attendance Ratio",
+    x = "Attendance (%)",
+    y = "Task Rating (%)"
+  ) +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+```
+
+### Scatterplot: Presence Rate & Task Rating Trend
+
+```{r}
+ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+  geom_point(color = "steelblue", size = 2, alpha = 0.7) +                        # points
+  geom_smooth(method = "lm", se = TRUE, color = "darkred", linewidth = 1) +       # trend line with CI
+  labs(
+    title = "Attendance vs Task Rating with Regression Trend Line",
+    x = "Attendance Ratio",
+    y = "Task Rating"
+  ) +
+  scale_x_continuous(breaks = seq(0, 1, 0.1)) +                                  # ticks every 0.1
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 10)
+  )
+```
+
+```{r}
+pairs(merged_df[, c("PresenceRatio", "task_rating")],
+      main = "Scatterplot Matrix")
+```
+
+### Linear Relationship: Presence Rate VS Task Rating
+
+```{r}
+spearman_cor_test_result <- cor.test(merged_df$PresenceRatio, merged_df$task_rating,
+                            method = "spearman", exact = FALSE, use = "complete.obs")
+spearman_cor_test_result
+```
+
+### Monotonicity: Presence Rate VS Task Rating
+
+```{r}
+pearson_cor_test_result <- cor.test(merged_df$PresenceRatio, merged_df$task_rating,
+                            method = "pearson", exact = FALSE, use = "complete.obs")
+pearson_cor_test_result
+```
+
+### Linearity and Monotonicity Plots
+
+```{r}
+p1 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_smooth(method = "lm", se = TRUE, color = "darkred") +
+  labs(title = "Pearson Correlation (Linear)",
+       x = "Attendance Ratio",
+       y = "Task Rating") +
+  theme_minimal()
+
+# Spearman scatterplot with loess smooth (captures monotonic relationship)
+p2 <- ggplot(merged_df, aes(x = PresenceRatio, y = task_rating)) +
+  geom_point(alpha = 0.6, color = "darkgreen") +
+  geom_smooth(method = "loess", se = TRUE, color = "forestgreen") +
+  labs(title = "Spearman Correlation (Monotonic)",
+       x = "Attendance Ratio",
+       y = "Task Rating") +
+  theme_minimal()
+
+p1 + p2
+```
+
+# Hypothesis 2: Number of courses started impacts performance outcomes
+
+**Assumption:** Students who start more courses may either demonstrate strong engagement or be overwhelmed, which could lead to different performance outcomes (completed, failed, or withdrawn).
+
+**Rationale:** Engaging with multiple courses may indicate either strong motivation or poor focus/time management skills, both of which could affect performance outcomes.
+
+```{r}
+course_outcomes <- merged_df %>%
+  mutate(total_courses = Completed + Incomplete + Participated + Withdrawn) %>%
+  pivot_longer(
+    cols = c(Completed, Incomplete, Participated, Withdrawn),
+    names_to = "Outcome",
+    values_to = "Count"
+  )
+```
+
+## Proportion of Course Outcomes by Number of Courses Started
+
+```{r}
+course_outcomes <- course_outcomes %>%
+  mutate(total_bin = cut(total_courses, breaks = c(0, 2, 5, 10, Inf),
+                         labels = c("1-2", "3-5", "6-10", "10+"), right = FALSE))
+
+ggplot(course_outcomes, aes(x = total_bin, y = Count, fill = Outcome)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = percent_format()) +
+  labs(
+    title = "Proportion of Course Outcomes by Number of Courses Started",
+    x = "Total Number of Courses Started (Binned)",
+    y = "Proportion of Outcomes",
+    fill = "Outcome"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+df <- merged_df %>%
+  mutate(
+    total_courses = Completed + Participated + Rejected + Withdrawn,
+    course_volume_group = cut(
+      total_courses,
+      breaks = c(-Inf, 2, 5, 10, Inf),
+      labels = c("1–2", "3–5", "6-10", "10+")
+    )
+  )
+
+outcome_table <- df %>%
+  group_by(course_volume_group) %>%
+  summarise(
+    Completed = sum(Completed, na.rm = TRUE),
+    Participated = sum(Participated, na.rm = TRUE),
+    Failed = sum(Rejected, na.rm = TRUE),
+    Withdrawn = sum(Withdrawn, na.rm = TRUE)
+  )
+```
+
+```{r}
+outcome_matrix <- as.matrix(outcome_table[, -1])
+rownames(outcome_matrix) <- outcome_table$course_volume_group
+chisq_result <- chisq.test(outcome_matrix)
+```
+
+```{r}
+outcome_matrix
+```
+
+## Variable Independence Test
+
+```{r}
+chisq_result
+```
+
+### Course Volume VS Performance Outcome
+
+```{r}
+mosaicplot(outcome_matrix,
+           main = "Mosaic Plot: Course Volume vs Performance Outcome",
+           color = TRUE,
+           xlab = "Number of Courses Started",
+           ylab = "Performance Outcome",
+           las = 1,          
+           cex.axis = 0.8) 
+```
+
+# Hypothesis 3: Withdrawn students show different behavioral patterns than those who fail or complete courses.
+
+**Assumption:** They have distinct engagement traits (e.g., lower attendance or fewer tasks completed).
+
+**Rationale:** Withdrawals may stem from personal or motivational issues, reflected in measurable behavior.
+
+```{r}
+merged_df$main_outcome_group <- case_when(
+  merged_df$Withdrawn > 0 ~ "Withdrawn",
+  merged_df$Completed > 0 ~ "Completed",
+  merged_df$Rejected > 0 ~ "Failed",
+  TRUE ~ "Other"
+)
+```
+
+## T-Test: Withdrawn vs Completed
+
+```{r}
+t.test(PresenceRatio ~ main_outcome_group, 
+       data = merged_df %>% filter(main_outcome_group %in% c("Withdrawn", "Completed")))
+```
+
+## T-Test: Withdrawn vs Failed
+
+```{r}
+t.test(PresenceRatio ~ main_outcome_group, 
+       data = merged_df %>% filter(main_outcome_group %in% c("Withdrawn", "Failed")))
+```
+## Principal Component Analysis (PCA)
+
+### Understanding PCA
+
+Principal Component Analysis (PCA) reduces high-dimensional data into fewer dimensions by transforming correlated variables into uncorrelated components, where each component captures the **maximum possible variance** in the data.
+
+```{r}
+df_numeric <- merged_df %>%
+  select(where(is.numeric)) %>%
+  na.omit()
+
+groups <- merged_df %>%
+  filter(complete.cases(select(., where(is.numeric)))) %>%
+  pull(main_outcome_group)
+```
+
+#### We use prcomp() with centering and scaling to ensure equal weighting across features.
+
+```{r}
+pca_result <- prcomp(df_numeric, center = TRUE, scale. = TRUE)
+
+pca_df <- as.data.frame(pca_result$x)
+pca_df$Group <- groups
+```
+
+## PCA Plot: First Two Principal Components
+
+```{r}
+ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(alpha = 0.6, size = 1.5) +
+  labs(title = "PCA: First Two Principal Components",
+       color = "Outcome Group") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+```
+#### If Withdrawn points cluster separately from Completed or Failed, this supports the hypothesis: withdrawn students behave differently.
+

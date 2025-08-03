@@ -1,5 +1,10 @@
-library(shinydashboard)
-library(ggplot2)
+libs<-c("shinydashboard", "ggplot2")
+load_libraries<-function(libs){
+  new_libs <- libs[!(libs %in% installed.packages()[,"Package"])]
+  if(length(new_libs)>0) {install.packages(new_libs)}
+  lapply(libs, library, character.only = TRUE)
+}
+load_libraries(libs)
 
 ui <- dashboardPage(
   dashboardHeader(title ="This is my dashboard"),
