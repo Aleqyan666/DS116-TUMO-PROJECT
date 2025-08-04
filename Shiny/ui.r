@@ -1,13 +1,13 @@
-#libs <- c("shiny", "shinydashboard", "dplyr", "ggplot2", "readr", "tidyr", "stringr", "forcats", "lubridate", "broom", "janitor")
+libs <- c("shiny", "shinydashboard", "dplyr", "ggplot2", "readr", "tidyr", "stringr", "forcats", "lubridate", "broom", "janitor")
 
-#load_libraries <- function(libs){
-  #sapply(libs, function(pkg){
-  #  if (!require(pkg, character.only = TRUE)) {
-   #   stop(paste("Package not found:", pkg))  
-  #  }
- # })
-#}
-#load_libraries(libs)
+load_libraries <- function(libs){
+  sapply(libs, function(pkg){
+    if (!require(pkg, character.only = TRUE)) {
+      stop(paste("Package not found:", pkg))
+    }
+  })
+}
+load_libraries(libs)
 
 library("shiny")
 library("shinydashboard")
@@ -40,7 +40,7 @@ ui <- dashboardPage(
   dashboardBody(
     tags$head(
       tags$style(HTML(
-      "
+        "
             html, body, .wrapper, .content-wrapper {
         height: 100% !important;
         min-height: 100% !important;
@@ -49,22 +49,22 @@ ui <- dashboardPage(
         height: 100% !important;
       }}
       "))
-  ),
-  
+    ),
+    
     tabItems(
-      tabItem(tabName = "home",  
+      tabItem(tabName = "home",
               h1("Welcome to the TUMO Student Analytics Dashboard"),
               HTML("
         <h4><strong>📌 Purpose Statement</strong></h4>
         <p>This dashboard presents a comprehensive <em>learning analytics framework</em> designed to evaluate and visualize student behavior, engagement, and academic trajectories at the <strong>TUMO Center for Creative Technologies</strong>. By leveraging rich, multidimensional data—ranging from demographics to course completion patterns—this project delivers actionable insights to enhance student support and program quality.</p>
-    
+
         <ul>
           <li> Identify performance trends across <strong>gender and age groups</strong></li>
           <li> Analyze <strong>temporal patterns</strong> in course popularity and dropout rates</li>
           <li> Understand engagement styles using <strong>clustering and segmentation</strong></li>
           <li> Inform data-driven decision-making to optimize educational delivery</li>
         </ul>
-    
+
         <h4><strong> Dashboard Sections Overview</strong></h4>
         <ul>
           <li><strong> Demographics & Foundations:</strong> Explore foundational student attributes such as gender distribution, age patterns, and initial program classification.</li>
@@ -74,7 +74,7 @@ ui <- dashboardPage(
           <li><strong> Performance Trends & Insights:</strong> Discover high-level summaries and key drivers of success or early dropout.</li>
         </ul>
       ")
-
+              
       ),
       
       tabItem(tabName = "student_demographics",
@@ -96,7 +96,7 @@ ui <- dashboardPage(
               
               h3("Workshop Enrollments"),
               tags$div(style = "height: 350px; overflow-y: auto; padding-top: 20px;",
-                       plotOutput("workshop_enrollments", height = "300px")),  
+                       plotOutput("workshop_enrollments", height = "300px")),
               
               h3("Skill Popularity"),
               tags$div(style = "height: 350px; overflow-y: auto; padding-top: 20px;",
@@ -123,7 +123,7 @@ ui <- dashboardPage(
       # THEME 4 - Engagement & Performance
       tabItem(tabName = "engagement_performance",
               h1("Student Engagement & Performance"),
-              h5("Analyzes student engagement and performance through attendance, task completion, and course outcomes. 
+              h5("Analyzes student engagement and performance through attendance, task completion, and course outcomes.
                  Identifies behavioral patterns and key factors associated with success, failure, and withdrawal using statistical and visual methods."),
               
               h3("Attendance & Perfromance"),
@@ -133,27 +133,27 @@ ui <- dashboardPage(
               h3("Task Rating & Presence"),
               tags$div(style = "height: 350px; overflow-y: auto; padding-top: 20px;",
                        plotOutput("corr_matrix_presence_taskrating", height = "300px")),
-
-      
+              
+              
               h3("Linear Dependency and Monotonicty"),
               tags$div(style = "height: 350px; overflow-y: auto; padding-top: 20px;",
                        plotOutput("linearity_monotonicty_test_double", height = "300px")),
-      
+              
               h3("Course Outcomes & Courses Taken"),
               tags$div(style = "height: 350px; overflow-y: auto; padding-top: 20px;",
                        plotOutput("course_outcomes_bars_ratios", height = "300px")),
-  
+              
               h3("PCA: Behavior-Based Clustering"),
               tags$div(style = "height: 350px; overflow-y: auto; padding-top: 20px;",
                        plotOutput("pca_analytics", height = "300px")),
               
-
-      
-      
-      # THEME 5 — Performance Trends & Insights
-      #tabItem(tabName = "performance_trends_insights",
-          #    h1("Performance Trends & Insights"),
-          #    h3("Preformance Trends"),
+              
+              
+              
+              # THEME 5 — Performance Trends & Insights
+              #tabItem(tabName = "performance_trends_insights",
+              #    h1("Performance Trends & Insights"),
+              #    h3("Preformance Trends"),
               #tags$div(style = "height: 350px; overflow-y: auto; padding-top: 20px;",
               #         plotOutput("part4", height = "300px")),
               
@@ -169,33 +169,33 @@ server <- function(input, output) {
   
   output$age_distribution <- renderPlot({
     ws <- read.csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv",
-                 stringsAsFactors=FALSE, na.strings=c("","NA")) %>%
-    rename(Age=AgeTillStartDate) %>%
-    mutate(TumoID=as.character(TumoID),
-           Gender=factor(Gender),
-           Age=as.numeric(Age))
-  
-  si <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv",
-                 stringsAsFactors=FALSE, na.strings=c("","NA")) %>%
-    mutate(TumoID=as.character(TumoID),
-           Classification=ifelse(is.na(Classification),"null",Classification),
-           Classification=factor(Classification,levels=c("null","T","U","M","O"))) %>%
-    select(TumoID,Classification)
-  
-  demo <- ws %>%
-    group_by(TumoID) %>%
-    summarise(Gender=first(Gender),
-              Age=round(median(Age,na.rm=TRUE)),
-              .groups="drop") %>%
-    left_join(si,by="TumoID") %>%
-    filter(!is.na(Gender),!is.na(Age),!is.na(Classification))
+                   stringsAsFactors=FALSE, na.strings=c("","NA")) %>%
+      rename(Age=AgeTillStartDate) %>%
+      mutate(TumoID=as.character(TumoID),
+             Gender=factor(Gender),
+             Age=as.numeric(Age))
+    
+    si <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv",
+                   stringsAsFactors=FALSE, na.strings=c("","NA")) %>%
+      mutate(TumoID=as.character(TumoID),
+             Classification=ifelse(is.na(Classification),"null",Classification),
+             Classification=factor(Classification,levels=c("null","T","U","M","O"))) %>%
+      select(TumoID,Classification)
+    
+    demo <- ws %>%
+      group_by(TumoID) %>%
+      summarise(Gender=first(Gender),
+                Age=round(median(Age,na.rm=TRUE)),
+                .groups="drop") %>%
+      left_join(si,by="TumoID") %>%
+      filter(!is.na(Gender),!is.na(Age),!is.na(Classification))
     
     ggplot(demo, aes(x=Age)) +
       geom_histogram(binwidth=1, fill="#619CFF", color="white") +
       labs(title="Age Distribution of TUMO Students",
            x="Age (years)", y="Count") +
-      theme_minimal()  
-  }) 
+      theme_minimal()
+  })
   
   output$classification_boxplot <- renderPlot({
     
@@ -244,7 +244,7 @@ server <- function(input, output) {
     
     merged_df <- workshops %>%
       left_join(perf %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID") %>%
-      left_join(list_df %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID")    
+      left_join(list_df %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID")
     
     merged_df %>%
       filter(!is.na(StartDate)) %>%
@@ -284,9 +284,9 @@ server <- function(input, output) {
     
     merged_df <- workshops %>%
       left_join(perf %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID") %>%
-      left_join(list_df %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID")    
+      left_join(list_df %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID")
     
-      merged_df %>%
+    merged_df %>%
       filter(!is.na(StartDate), !is.na(Skill)) %>%
       mutate(
         StartDate = as.Date(StartDate, format = "%d-%b-%y"),
@@ -296,7 +296,7 @@ server <- function(input, output) {
       group_by(MonthYear, Skill) %>%
       summarise(Enrollments = n(), .groups = "drop") %>%
       ggplot(aes(x = MonthYear, y = Enrollments, color = Skill, group = Skill)) +
-      geom_line(linewidth = 0.7) + 
+      geom_line(linewidth = 0.7) +
       scale_y_continuous(
         breaks = seq(0, 900, by = 100),
         labels = scales::comma_format()
@@ -328,7 +328,7 @@ server <- function(input, output) {
     
     merged_df <- workshops %>%
       left_join(perf %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID") %>%
-      left_join(list_df %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID")    
+      left_join(list_df %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID")
     
     merged_df %>%
       filter(!is.na(StartDate)) %>%
@@ -493,14 +493,14 @@ server <- function(input, output) {
   output$scatterplot_presence_ratio <- renderPlot({
     student_performance <- read.csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
     student_info <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
-
+    
     student_info$TumoID <- as.numeric(student_info$TumoID)
-    options(scipen = 999) 
-
-    student_performance$task_rating <- round(student_performance$Awarded / 
+    options(scipen = 999)
+    
+    student_performance$task_rating <- round(student_performance$Awarded /
                                                (student_performance$Awarded + student_performance$Rejected), 2)
-    student_performance$training_rating <- round(student_performance$Completed / 
-                                                   (student_performance$Incomplete + student_performance$Participated +       
+    student_performance$training_rating <- round(student_performance$Completed /
+                                                   (student_performance$Incomplete + student_performance$Participated +
                                                       student_performance$Withdrawn + student_performance$Completed), 2)
     
     merged_df <- inner_join(student_info, student_performance, by = "TumoID")
@@ -528,12 +528,12 @@ server <- function(input, output) {
     student_info <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
     
     student_info$TumoID <- as.numeric(student_info$TumoID)
-    options(scipen = 999) 
+    options(scipen = 999)
     
-    student_performance$task_rating <- round(student_performance$Awarded / 
+    student_performance$task_rating <- round(student_performance$Awarded /
                                                (student_performance$Awarded + student_performance$Rejected), 2)
-    student_performance$training_rating <- round(student_performance$Completed / 
-                                                   (student_performance$Incomplete + student_performance$Participated +       
+    student_performance$training_rating <- round(student_performance$Completed /
+                                                   (student_performance$Incomplete + student_performance$Participated +
                                                       student_performance$Withdrawn + student_performance$Completed), 2)
     
     merged_df <- inner_join(student_info, student_performance, by = "TumoID")
@@ -546,19 +546,19 @@ server <- function(input, output) {
   output$linearity_monotonicty_test_double <- renderPlot({
     student_performance <- read.csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
     student_info <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
-
+    
     student_info$TumoID <- as.numeric(student_info$TumoID)
-    options(scipen = 999) 
-
-    student_performance$task_rating <- round(student_performance$Awarded / 
+    options(scipen = 999)
+    
+    student_performance$task_rating <- round(student_performance$Awarded /
                                                (student_performance$Awarded + student_performance$Rejected), 2)
     
-    student_performance$training_rating <- round(student_performance$Completed / 
-                                                   (student_performance$Incomplete + student_performance$Participated +       
+    student_performance$training_rating <- round(student_performance$Completed /
+                                                   (student_performance$Incomplete + student_performance$Participated +
                                                       student_performance$Withdrawn + student_performance$Completed), 2)
-
+    
     merged_df <- inner_join(student_info, student_performance, by = "TumoID")
-
+    
     merged_df$PresenceRatio <- round(as.integer(merged_df$PresenceRatio) / 100, 2)
     
     
@@ -587,13 +587,13 @@ server <- function(input, output) {
     student_info <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
     
     student_info$TumoID <- as.numeric(student_info$TumoID)
-    options(scipen = 999) 
+    options(scipen = 999)
     
-    student_performance$task_rating <- round(student_performance$Awarded / 
+    student_performance$task_rating <- round(student_performance$Awarded /
                                                (student_performance$Awarded + student_performance$Rejected), 2)
     
-    student_performance$training_rating <- round(student_performance$Completed / 
-                                                   (student_performance$Incomplete + student_performance$Participated +       
+    student_performance$training_rating <- round(student_performance$Completed /
+                                                   (student_performance$Incomplete + student_performance$Participated +
                                                       student_performance$Withdrawn + student_performance$Completed), 2)
     
     merged_df <- inner_join(student_info, student_performance, by = "TumoID")
@@ -607,8 +607,8 @@ server <- function(input, output) {
         names_to = "Outcome",
         values_to = "Count"
       )
-
-        course_outcomes <- course_outcomes %>%
+    
+    course_outcomes <- course_outcomes %>%
       mutate(total_bin = cut(total_courses, breaks = c(0, 2, 5, 10, Inf),
                              labels = c("1-2", "3-5", "6-10", "10+"), right = FALSE))
     
@@ -627,17 +627,17 @@ server <- function(input, output) {
   output$pca_analytics <- renderPlot({
     student_performance <- read.csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
     student_info <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
-
+    
     student_info$TumoID <- as.numeric(student_info$TumoID)
-    options(scipen = 999) 
-
-    student_performance$task_rating <- round(student_performance$Awarded / 
+    options(scipen = 999)
+    
+    student_performance$task_rating <- round(student_performance$Awarded /
                                                (student_performance$Awarded + student_performance$Rejected), 2)
     
-    student_performance$training_rating <- round(student_performance$Completed / 
-                                                   (student_performance$Incomplete + student_performance$Participated +       
+    student_performance$training_rating <- round(student_performance$Completed /
+                                                   (student_performance$Incomplete + student_performance$Participated +
                                                       student_performance$Withdrawn + student_performance$Completed), 2)
-
+    
     merged_df <- inner_join(student_info, student_performance, by = "TumoID")
     merged_df$PresenceRatio <- round(as.integer(merged_df$PresenceRatio) / 100, 2)
     
@@ -655,14 +655,14 @@ server <- function(input, output) {
     groups <- merged_df %>%
       filter(complete.cases(select(., where(is.numeric)))) %>%
       pull(main_outcome_group)
-
+    
     # We  prcomp() with centering and scaling to ensure equal weighting across features.
-
+    
     pca_result <- prcomp(df_numeric, center = TRUE, scale. = TRUE)
     
     pca_df <- as.data.frame(pca_result$x)
     pca_df$Group <- groups
-   
+    
     ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
       geom_point(alpha = 0.6, size = 1.5) +
       labs(title = "PCA: First Two Principal Components",
