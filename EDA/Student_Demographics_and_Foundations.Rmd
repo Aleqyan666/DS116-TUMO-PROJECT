@@ -1,10 +1,10 @@
 ---
 title: "Student Demographics & Foundations"
 output:
-  html_document:
-    df_print: paged
   pdf_document:
     latex_engine: xelatex
+  html_document:
+    df_print: paged
 knitr:
   opts_chunk:
     echo: false

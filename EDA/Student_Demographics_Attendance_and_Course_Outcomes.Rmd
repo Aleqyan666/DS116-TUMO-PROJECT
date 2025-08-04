@@ -1,6 +1,7 @@
 ---
 title: "Student Demographics, Attendance, and Course Outcomes"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 date: "2025-08-02"

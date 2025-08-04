@@ -3,6 +3,9 @@ title: "Performance Trends & Insights"
 author: "Aram Barkhudaryan"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
+  pdf_document:
+    toc: true
+    toc_depth: '4'
   html_document:
     toc: true
     toc_depth: 4

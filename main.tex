@@ -1,0 +1,257 @@
+\documentclass[11pt]{beamer}
+\usetheme{Madrid}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\title[Final Project]{\textbf{Analysis of TUMO Student Data}}
+\subtitle{DS116 / CS343}
+\author{Rita, Hayk A, Hayk G, Gor, Aram} 
+\date{\today}
+
+\newcommand{\placeholderplot}[2]{%
+  \begin{figure}
+    \centering
+    \fbox{%
+      \parbox[c][3.5cm][c]{0.85\linewidth}{%
+        \centering \textbf{Plot placeholder:} #1\\[4pt]
+        \emph{#2}
+      }%
+    }
+    \caption{#1}
+  \end{figure}
+}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+\begin{frame}{Outline}
+  \tableofcontents
+\end{frame}
+
+% Abstract
+\section{Abstract}
+\begin{frame}{Abstract}
+  % You can paste the abstract text here.
+  \begin{itemize}
+    This project investigates student learning outcomes at the TUMO Center through data-driven exploratory analysis in R.
+Using anonymized student-level data, we analyze engagement patterns, performance trends over time, and cluster students based on behavioral and demographic features.
+The findings aim to inform program design and decision-making at TUMO by identifying key insights into student progress and segmentation. analysis.
+  \end{itemize}
+\end{frame}
+
+% Keywords
+\section{Keywords}
+\begin{frame}{Keywords}
+  % List keywords from the paper
+  \begin{itemize}
+    TUMO; Student Performance; Learning Outcomes; Data Visualization; RShiny; Dashboard; Clustering; Segmentation; R; Data Science; Exploratory Data Analysis (EDA); Education Analytics.
+  \end{itemize}
+\end{frame}
+
+% Introduction
+\section{Introduction}
+\begin{frame}{Introduction}
+  \begin{itemize}
+    The TUMO Center for Creative Technologies empowers students through project-based learning in various fields, from technology to design. As participation grows, so does the importance of understanding how students learn and progress. This project applies exploratory data analysis (EDA) techniques using R to uncover trends in student performance, engagement over time, course popularity, and meaningful subgroups within the student population. The goal is to extract actionable insights that can support curriculum planning and personalized learning paths.
+  \end{itemize}
+\end{frame}
+
+% Literature Review
+\section{Literature Review}
+\begin{frame}{Literature Review}
+  \begin{itemize}
+    Exploratory Data Analysis (EDA) is a foundational approach in educational data mining for uncovering patterns that conventional assessments may overlook. Numerous studies highlight the utility of clustering and segmentation techniques in understanding the diversity of learning behaviors and optimizing interventions for personalized learning. In the context of this project, tools from the R ecosystem—such as ggplot2 for visualization, dplyr for data manipulation, and rstatix for statistical testing—enabled a comprehensive and reproducible workflow. Research in tech-enabled learning environments has shown that trend analysis over time, combined with segmentation based on learner profiles, can provide meaningful insights to guide curriculum and engagement strategies.
+  \end{itemize}
+\end{frame}
+
+% Data Collection
+\section{Data Collection}
+\begin{frame}{Data Collection}
+  \begin{itemize}
+    The dataset used in this project was provided directly by the TUMO Center for Creative Technologies. It consists of anonymized student-level records captured across different sessions, workshops, and time periods. Key features include student identifiers, demographic details (e.g., age, gender), enrollment and participation dates, workshop attendance, and module completion indicators. The data was primarily supplied in CSV format, with some parts briefly reviewed in Excel to understand initial structure and metadata annotations. All source files were placed in the Data/ directory of the project to ensure organization and reproducibility.
+  \end{itemize}
+\end{frame}
+
+% Data Preprocessing
+\section{Data Preprocessing}
+\begin{frame}{Data Preprocessing}
+  \begin{itemize}
+    Before conducting any analysis, the raw dataset provided by the TUMO Center was carefully cleaned and prepared to ensure reliability and consistency. The preprocessing stage involved several key steps:
+
+- **Cleaning column names** to standardize and simplify the structure using consistent naming conventions.  
+- **Removing duplicate records** to ensure each student and workshop entry was unique and not overrepresented.  
+- **Handling missing values**, especially in critical fields like student IDs, age, or gender. Rows with incomplete key data were removed or imputed as appropriate.  
+- **Parsing and formatting date variables** such as enrollment dates using consistent `YYYY-MM-DD` formats. This allowed for accurate time-based calculations and visualizations.  
+- **Encoding categorical variables**, such as gender, using factor levels to support grouped summaries and statistical tests.  
+  \end{itemize}
+\end{frame}
+
+% Visualizations and Analyses
+\section{Exploratory Visualizations}
+
+\subsection{Overall Age Distribution}
+\begin{frame}{Overall Age Distribution}
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot1.png}
+    \caption{Figure: Overall Age Distribution.}
+  \end{figure}
+\end{frame}
+
+\subsection{Boxplot of Age per Classification}
+\begin{frame}{Boxplot of Age per Classification}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot2.png}
+    \caption{Figure: Boxplot of Age per Classification.}
+    \end{figure}
+\end{frame}
+
+\subsection{Age by Classification \& Gender}
+\begin{frame}{Age by Classification \& Gender}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot3.png}
+    \caption{Figure: Age by Classification \& Gender.}
+    \end{figure}
+\end{frame}
+
+\subsection{Student Dynamics \& Learning Patterns}
+\begin{frame}{Student Dynamics \& Learning Patterns}
+  \begin{itemize}
+    \item Trends in enrollment, completion, withdrawal over time.
+  \end{itemize}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot4.png}
+    \caption{Figure: Student Dynamics \& Learning Patterns.}
+    \end{figure}
+\end{frame}
+
+\subsection{Skill Popularity over Time}
+\begin{frame}{Skill Popularity over Time}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot5.png}
+    \caption{Figure: Skill Popularity over Time.}
+    \end{figure}
+\end{frame}
+
+\subsection{Skill Enrollment by Quarter}
+\begin{frame}{Skill Enrollment by Quarter}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot7.png}
+    \caption{Figure: Skill Enrollment by Quarter.}
+    \end{figure}
+\end{frame}
+
+\subsection{Monthly Withdrawals: 2024 vs 2025}
+\begin{frame}{Monthly Withdrawals: 2024 vs 2025}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot6.png}
+    \caption{Figure: Skill Enrollment by Quarter.}
+    \end{figure}
+\end{frame}
+
+\subsection{Workshop Outcome Types}
+\begin{frame}{Workshop Outcome Types}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot8.png}
+    \caption{Figure: Workshop Outcome Types.}
+    \end{figure}
+\end{frame}
+
+
+\subsection{Registered vs Incomplete Students Over Time}
+\begin{frame}{Registered vs Incomplete Students Over Time}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot9.png}
+    \caption{Figure: Registration vs Incompletion.}
+    \end{figure}
+\end{frame}
+
+\subsection{Attendance by Gender}
+\begin{frame}{Attendance by Gender}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot10.png}
+    \caption{Figure: Attendance by Gender.}
+    \end{figure}
+\end{frame}
+
+\subsection{Failure Rates by Age \& Gender}
+\begin{frame}{Failure Rates by Age \& Gender}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot11.png}
+    \caption{Figure: Failure Rates by Age and Gender.}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Monotonicity: Presence Rate vs Task Rating}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot13.png}
+    \caption{Figure: Weighted Completion Score by Gender and Age Group.}
+    \end{figure}\end{frame}
+
+\begin{frame}{Flow of Students}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot14.png}
+    \caption{Figure: Alluvial Plot.}
+    \end{figure}\end{frame}
+
+\begin{frame}{Scatterplot: Presence Rate \& Task Rating Trend}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot15.png}
+    \caption{Figure: Presence Rate \& Task Rating Trend.}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Linearity and Monotonicity}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot16.png}
+    \caption{Figure: Attendance by Gender.}
+    \end{figure}
+\end{frame}
+
+
+% PCA
+\section{Principal Component Analysis (PCA)}
+\begin{frame}{PCA Methodology}
+  \begin{itemize}
+    \item Using \texttt{prcomp()} with centering and scaling
+    \item Purpose: dimensionality reduction, pattern discovery
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{PCA Plot: First Two Principal Components}
+    \begin{figure}
+    \centering
+    \includegraphics[width=0.85\linewidth]{plot17.png}
+    \caption{Figure: PCA
+    .}
+    \end{figure}\end{frame}
+
+\section{Conclusions}
+\begin{frame}{Conclusions}
+  \begin{itemize}
+    \item THANK YOU!
+  \end{itemize}
+\end{frame}
+
+\end{document}
