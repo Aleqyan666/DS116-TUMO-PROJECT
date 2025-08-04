@@ -1,0 +1,1009 @@
+---
+title: "Final Project"
+author: ""
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 4
+    number_sections: false
+    fig_caption: true
+    latex_engine: xelatex
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = F,
+  message = F,
+  fig.width = 8,
+  fig.height = 5,
+  dpi = 150
+)
+library(readr)
+library(readxl)
+library(stringr)
+library(dplyr)
+library(ggplot2)
+library(ggridges)
+library(ggalluvial)
+library(patchwork)
+library(scales)
+library(viridis)
+library(ggbeeswarm)
+library(rstatix)
+library(ggrepel)
+library(janitor)
+library(broom)
+library(lubridate)
+library(tidyr)
+library(patchwork)
+library(rstatix)
+library(forcats)
+```
+
+\begin{titlepage}
+    \centering
+    {\Huge \textbf{DS116 / CS343} \par}
+    \vspace{1cm}
+    {\LARGE \textbf{Final Project} \par}
+    \vspace{1cm}
+    {\huge \textbf{Analysis of TUMO Student Data} \par}
+    \vspace{2cm}
+    {\large Rita Chamiyan, Hayk Alekyan, Aram Barkhudaryan, Gor Arutiunian, Hayk Grigoryan \par}
+    \vspace{1cm}
+    \textit{American University of Armenia\\Yerevan, Armenia}
+    \vfill
+    {\large August 4, 2025\par}
+\end{titlepage}
+\newpage
+\tableofcontents
+\newpage
+
+# Abstract
+
+This project investigates student learning outcomes at the TUMO Center through data-driven exploratory analysis in R.
+Using anonymized student-level data, we analyze engagement patterns, performance trends over time, and cluster students based on behavioral and demographic features.
+The findings aim to inform program design and decision-making at TUMO by identifying key insights into student progress and segmentation.
+
+# Keywords:
+
+TUMO; Student Performance; Learning Outcomes; Data Visualization; RShiny; Dashboard; Clustering; Segmentation; R; Data Science; Exploratory Data Analysis (EDA); Education Analytics.
+
+# Introduction
+
+The TUMO Center for Creative Technologies empowers students through project-based learning in various fields, from technology to design. As participation grows, so does the importance of understanding how students learn and progress. This project applies exploratory data analysis (EDA) techniques using R to uncover trends in student performance, engagement over time, course popularity, and meaningful subgroups within the student population. The goal is to extract actionable insights that can support curriculum planning and personalized learning paths.
+
+# Literature Review
+
+Exploratory Data Analysis (EDA) is a foundational approach in educational data mining for uncovering patterns that conventional assessments may overlook. Numerous studies highlight the utility of clustering and segmentation techniques in understanding the diversity of learning behaviors and optimizing interventions for personalized learning. In the context of this project, tools from the R ecosystem—such as ggplot2 for visualization, dplyr for data manipulation, and rstatix for statistical testing—enabled a comprehensive and reproducible workflow. Research in tech-enabled learning environments has shown that trend analysis over time, combined with segmentation based on learner profiles, can provide meaningful insights to guide curriculum and engagement strategies.
+
+# Data Collection
+
+The dataset used in this project was provided directly by the TUMO Center for Creative Technologies. It consists of anonymized student-level records captured across different sessions, workshops, and time periods. Key features include student identifiers, demographic details (e.g., age, gender), enrollment and participation dates, workshop attendance, and module completion indicators. The data was primarily supplied in CSV format, with some parts briefly reviewed in Excel to understand initial structure and metadata annotations. All source files were placed in the Data/ directory of the project to ensure organization and reproducibility.
+
+# Data Preprocessing
+
+Before conducting any analysis, the raw dataset provided by the TUMO Center was carefully cleaned and prepared to ensure reliability and consistency. The preprocessing stage involved several key steps:
+
+- **Cleaning column names** to standardize and simplify the structure using consistent naming conventions.  
+- **Removing duplicate records** to ensure each student and workshop entry was unique and not overrepresented.  
+- **Handling missing values**, especially in critical fields like student IDs, age, or gender. Rows with incomplete key data were removed or imputed as appropriate.  
+- **Parsing and formatting date variables** such as enrollment dates using consistent `YYYY-MM-DD` formats. This allowed for accurate time-based calculations and visualizations.  
+- **Encoding categorical variables**, such as gender, using factor levels to support grouped summaries and statistical tests.  
+- **Creating derived variables**, such as total workshops attended per student or age at the time of enrollment, to provide additional insights for segmentation and trend analysis.  
+- **Joining and transforming data** into a tidy structure, where each variable forms a column, each observation forms a row, and each type of observational unit forms a table.
+
+To perform these operations, a range of tidyverse-based packages were used, including `dplyr`, `janitor`, `lubridate`, `tidyr`, and `forcats`. These tools enabled efficient and reproducible data wrangling, setting the stage for meaningful exploratory analysis and visualization.
+
+\newpage
+
+```{r}
+ws <- read.csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv",
+               stringsAsFactors=FALSE, na.strings=c("","NA")) %>%
+  rename(Age=AgeTillStartDate) %>%
+  mutate(TumoID=as.character(TumoID), Gender=factor(Gender), Age=as.numeric(Age))
+
+si <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv",
+               stringsAsFactors=FALSE, na.strings=c("","NA")) %>%
+  mutate(TumoID=as.character(TumoID),
+         Classification=ifelse(is.na(Classification),"null",Classification),
+         Classification=factor(Classification,levels=c("null","T","U","M","O"))) %>%
+  select(TumoID,Classification)
+
+demo <- ws %>%
+  group_by(TumoID) %>%
+  summarise(Gender=first(Gender), Age=round(median(Age,na.rm=TRUE)), .groups="drop") %>%
+  left_join(si,by="TumoID") %>%
+  filter(!is.na(Gender),!is.na(Age),!is.na(Classification))
+```
+
+### Overall Age Distribution
+
+```{r combined-three-plots, fig.cap="Age & Classification Overview", echo=FALSE, warning=FALSE, message=FALSE}
+p1 <- ggplot(demo, aes(x = Age)) +
+  geom_histogram(binwidth = 1, fill = "#619CFF", color = "white") +
+  labs(title = "Overall Age Distribution", x = "Age (years)", y = "Count") +
+  theme_minimal()
+
+p2 <- ggplot(demo, aes(x = Age, fill = Gender)) +
+  geom_histogram(binwidth = 1, position = "dodge", color = "white") +
+  labs(title = "Age Distribution by Gender", x = "Age (years)", y = "Count") +
+  theme_minimal()
+
+p3 <- ggplot(demo, aes(x = Classification, fill = Gender)) +
+  geom_bar(position = "dodge") +
+  geom_text(stat = "count", aes(label = after_stat(count)),
+            position = position_dodge(width = 0.9), vjust = 1, size = 2.4) +
+  labs(title = "Classification Counts by Gender", x = "Classification", y = "Count") +
+  theme_minimal()
+
+combined_abc <- (p1 | p2) / p3 + plot_annotation(
+  subtitle = "Top: age distributions; Bottom: classification counts by gender")
+combined_abc
+```
+
+The majority of TUMO students are between 12 and 16 years old, with a peak at age 13.
+Male and female students share nearly identical age profiles, both peaking at 13, indicating no gender gap in age distribution.
+Classification T and U dominate,in contrast, M and O are smaller.
+
+### Boxplot of Age per Classification
+
+```{r plot-boxplot-age-class, fig.cap="Boxplot of Age by Classification", echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(demo, aes(x=Classification, y=Age, fill=Classification)) +
+  geom_boxplot(outlier.shape=21, outlier.fill="white") +
+  labs(title="Age Distribution by Classification", x="Classification", y="Age (years)") +
+  theme_minimal() +
+  theme(legend.position="none")
+```
+
+Students in T are the youngest (median \~12), followed by U, M, and O; O shows the greatest age variability.
+
+### Age by Classification & Gender
+
+```{r plot-violon-jitter, fig.cap="Violin + Jitter: Age by Classification & Gender", echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(demo, aes(x=Classification, y=Age, fill=Gender)) +
+  geom_violin(alpha=0.6, position=position_dodge(0.8)) +
+  geom_jitter(aes(color=Gender), position=position_dodge(0.8), size=1, alpha=0.7) +
+  labs(title="Age by Classification & Gender", x="Classification", y="Age (years)") +
+  theme_minimal() +
+  scale_color_brewer(palette="Set1")
+```
+
+Within each classification, male and female ages overlap heavily; no gender-specific outliers.
+
+```{r rita, echo=FALSE, warning=FALSE, message=FALSE}
+perf <- read_csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+who <- read_csv("Data/TUMO Yerevan Center Report_Who Passed What_Table - Sheet1.csv")
+list_df <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
+workshops <- read.csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
+
+perf <- perf %>% mutate(TumoID = as.character(TumoID))
+who <- who %>% mutate(TumoID = as.character(TumoID))
+list_df <- list_df %>% mutate(TumoID = as.character(TumoID))
+workshops <- workshops %>% mutate(TumoID = as.character(TumoID))
+
+merged_df <- workshops %>%
+  left_join(perf %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID") %>%
+  left_join(list_df %>% distinct(TumoID, .keep_all = TRUE), by = "TumoID")
+```
+
+\newpage
+
+### Student Dynamics & Learning Patterns
+
+This section looks at how student involvement in workshops changes over time.
+It covers seasonal patterns, which skills are popular, when students tend to withdraw or fail.
+1.
+Which skills are becoming more or less popular over time?
+2.
+Do withdrawals happen more often in certain months/seasons?
+3.
+Are there time-based patterns in failure rates (Incomplete or Participated outcomes)?
+
+*H1.* Course Popularity Over Time Hypothesis: Some skills have become more popular in recent months compared to others.
+
+H(Null): Skill enrollments have remained constant over time — no skill shows increasing popularity.
+H(Alternative): At least one skill shows a significant increase in enrollments over time (i.e., skill popularity is increasing).
+
+```{r qwqqq, echo=FALSE, warning=FALSE, message=FALSE}
+merged_df %>%
+  filter(!is.na(StartDate)) %>%
+  mutate(StartDate_parsed = as.Date(StartDate, format = "%d-%b-%y")) %>%
+  filter(!is.na(StartDate_parsed)) %>%
+  mutate(MonthYear = format(StartDate_parsed, "%b %Y"), 
+      MonthYear = factor(MonthYear,
+      levels = unique(format(sort(StartDate_parsed), "%b %Y")))) %>%
+  group_by(MonthYear) %>%
+  summarise(TotalEnrollments = n(), .groups = "drop") %>%
+  ggplot(aes(x = MonthYear, y = TotalEnrollments)) +
+  geom_col(fill = "#41a987") +
+  scale_y_continuous(breaks = seq(0, 6000, by = 1000), labels = comma_format()) +
+  labs(title = "Total Workshop Enrollments per Month", x = "Month", y = "Total Enrollments") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Workshop enrollments from January 2024 to June 2025 show clear ups and downs.
+In the first few months of 2024, around 3,500 students joined each month.
+That number jumped in April and May, going over 5,000 students — the busiest time of the year.
+Then in June 2024, enrollments dropped below 500.
+This wasn’t because students lost interest, but because fewer workshops were offered that month.
+After summer, enrollments picked up again in September and stayed steady through April 2025, averaging around 3,200 to 3,800 per month.
+May and June 2025 showed another small decline.
+Overall, this pattern reflects the center’s usual schedule: peak engagement in spring, lower activity in summer, and steady interest during the school year.
+
+```{r qwq, echo=FALSE, warning=FALSE, message=FALSE}
+skill_month_table_df <- merged_df %>%
+  filter(!is.na(StartDate), !is.na(Skill)) %>%
+  mutate(StartDate = as.Date(StartDate, format = "%d-%b-%y"),
+    MonthYear = format(StartDate, "%b %Y")) %>%
+  count(Skill, MonthYear) %>%
+  pivot_wider(names_from = MonthYear, values_from = n, values_fill = 0)
+skill_month_table <- skill_month_table_df %>%
+  as.data.frame()
+rownames(skill_month_table) <- skill_month_table$Skill
+skill_month_table$Skill <- NULL
+skill_month_table <- as.matrix(skill_month_table)
+
+chisq_result_H1 <- chisq.test(skill_month_table)
+print(chisq_result_H1)
+
+if (chisq_result_H1$p.value < 0.05) {
+  cat("H is supported: Skill popularity changes significantly over time.\n")
+} else {
+  cat("Fail to reject H: No significant difference in skill enrollments over time.\n")
+}
+```
+
+### Skill popularity over Time
+
+To see if student interest in different workshop skills changed over time, a Chi-squared test was used.
+The result was very clear: the p-value was far below 0.05, meaning there was a real difference.
+Some skills became more popular at certain times, while others dropped off.
+This can happen because of when skills are offered, school schedules, or changing trends.
+
+```{r wew, echo=FALSE, warning=FALSE, message=FALSE}
+skill_trend <- merged_df %>%
+  filter(!is.na(StartDate), !is.na(Skill)) %>%
+  mutate(StartDate_parsed = parse_date_time(StartDate, orders = c("d-b-y", "Y-m-d")), 
+    MonthYear = floor_date(StartDate_parsed, "month")) %>%
+  filter(!is.na(MonthYear)) %>%
+  group_by(MonthYear, Skill) %>%
+  summarise(Enrollments = n(), .groups = "drop") %>%
+  mutate(MonthYearLabel = format(MonthYear, "%b %Y")) %>%
+  arrange(MonthYear) %>%
+  mutate(MonthYearLabel = factor(MonthYearLabel, levels = unique(MonthYearLabel)))
+ggplot(skill_trend, aes(x = MonthYearLabel, y = Enrollments, color = Skill, group = Skill)) +
+  geom_line(linewidth = 0.7) +
+  scale_y_continuous(breaks = seq(0, 900, by = 100), labels = comma_format()) +
+  labs(title = "Skill Popularity Over Time", x = "Month", y = "Number of Enrollments per Skill") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 7), legend.position = "right", panel.grid.major = element_blank())
+```
+
+This is shown in the line graph "Skill Popularity Over Time." Programming, Photography, Music, and Game Development stayed popular throughout the year.
+They often had over 500 students in peak months.
+Skills like Robotics, Writing, and Web Development had fewer enrollments and more ups and downs.
+All skills dropped in June 2024 due to fewer workshop offerings.
+By 2025, each skill showed its own trend.
+These insights help decide which skills to offer more often or promote more.
+
+### Skill Enrollment by Quarter
+
+```{r eew, echo=FALSE, warning=FALSE, message=FALSE}
+merged_df %>%
+  filter(!is.na(StartDate), !is.na(Skill)) %>%
+  mutate(StartDate_parsed = as.Date(StartDate, format = "%d-%b-%y"),
+    QuarterStart = floor_date(StartDate_parsed, unit = "quarter"),
+    QuarterYear = paste0("Q", quarter(QuarterStart), " ", year(QuarterStart))) %>%
+  filter(!is.na(QuarterStart), !is.na(Skill), Skill != "") %>%
+  mutate(QuarterYear = factor(QuarterYear,
+                           levels = QuarterStart %>%
+                           unique() %>%
+                           sort() %>%
+                           { paste0("Q", quarter(.), " ", year(.)) })) %>%
+  group_by(QuarterYear, Skill) %>%
+  summarise(TotalEnrollments = n(), .groups = "drop") %>%
+  ggplot(aes(x = QuarterYear, y = TotalEnrollments)) +
+  geom_col(fill = "#41a987") +
+  facet_wrap(~ Skill, scales = "free_y") +
+  scale_x_discrete(drop = TRUE) +
+  labs(title = "Workshop Enrollments per Skill over Time", x = "Quarter", y = "Enrollments") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 6), strip.text = element_text(size = 10),
+    plot.title = element_text(size = 14, face = "bold"), panel.grid.major = element_blank())
+```
+
+Looking at enrollments by quarter helps organize the trends more clearly.
+The biggest drop happened in Q2 2024 for all skills, again because of fewer offerings.
+Things picked up in Q3 and Q4, and by 2025, enrollment levels were stable again.
+Programming, Photography, Music, and Game Development had the most students each quarter — over 1,000 in many cases.
+Robotics, Web Development, and Writing had fewer students, but those numbers stayed steady.
+This shows that even smaller subjects have a loyal audience.
+
+*H2.* Withdrawal Trends Over Time Hypothesis: Withdrawals are more frequent in certain months (e.g. May, September).
+This part looked at whether students are more likely to withdraw from workshops during certain months.
+A Chi-squared test showed a clear result: withdrawals are not evenly spread out.
+The data showed a big spike in May 2024, with over 1,200 students leaving.
+Other high months included September, October, and December — times that match busy academic periods like exams or school restarts.
+
+H (Null): Withdrawals are evenly distributed across all months — no specific months have significantly higher withdrawal counts.
+H (Alternative): Withdrawals are not evenly distributed — some months (e.g., May, September) show higher withdrawal counts.
+
+```{r e, echo=FALSE, warning=FALSE, message=FALSE}
+withdrawal_test <- merged_df %>%
+  filter(PassStatus == "Withdrawn", !is.na(WithdrawDate)) %>%
+  mutate(WithdrawDate = parse_date_time(WithdrawDate, orders = c("d-b-y HMS", "B d, Y, I:M:S p")),
+    Month = month(WithdrawDate, label = TRUE)) %>%
+  count(Month)
+chisq_result_H2 <- chisq.test(withdrawal_test$n)
+chisq_result_H2
+if (chisq_result_H2$p.value < 0.05) {
+  cat("H₁ is supported: Withdrawals are not evenly distributed across months.\n")
+} else {
+  cat("Fail to reject H₀: Withdrawals appear evenly distributed by month.\n")
+}
+```
+
+### Monthy Withdrawals: 2024 VS 2025
+
+```{r w, echo=FALSE, warning=FALSE, message=FALSE}
+merged_df %>%
+  filter(PassStatus == "Withdrawn", !is.na(WithdrawDate)) %>%
+  mutate(WithdrawDate = parse_date_time(WithdrawDate, orders = c("d-b-y HMS", "B d, Y, I:M:S p")),
+    Month = factor(month(WithdrawDate, label = TRUE), levels = month.abb), Year = as.factor(year(WithdrawDate))) %>%
+  count(Month, Year) %>%
+  ggplot(aes(x = Month, y = n, fill = Year)) +
+  geom_col(position = "dodge") +
+  labs(title = "Monthly Withdrawals Grouped by Year", x = "Month", y = "Number of Withdrawals") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+July had almost no withdrawals, which matches the center’s summer break.
+In 2025, the same pattern continued but with slightly fewer total withdrawals.
+This shows that external factors, like school schedules, affect when students drop out.
+To help students stay engaged, the center could offer more flexible options or support in months like April and August before the usual withdrawal spikes.
+
+### Workshop Outcome Types
+
+```{r qwert, echo=FALSE, warning=FALSE, message=FALSE}
+status_summary <- merged_df %>%
+  filter(!is.na(PassStatus)) %>%
+  mutate(OutcomeGroup = case_when(
+      PassStatus == "Completed" ~ "Completed",
+      PassStatus == "Participated" ~ "Participated",
+      PassStatus == "Incomplete" ~ "Incomplete",
+      TRUE ~ "Withdrawn")) %>%
+  count(OutcomeGroup) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1),Label = paste0(OutcomeGroup, " (", Percentage, "%)"))
+
+status_summary <- status_summary %>%
+  mutate(Label = paste0(Percentage, "%"))
+
+ggplot(status_summary, aes(x = "", y = n, fill = OutcomeGroup)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  geom_text(aes(label = Label), position = position_stack(vjust = 0.5), size = 3) +
+  labs(title = "Student Outcomes in TUMO Workshops", x = NULL, y = NULL, fill = 'Outcome Type') +
+  theme_minimal() +
+  theme(axis.text = element_blank(), axis.ticks = element_blank(), panel.grid = element_blank())
+```
+
+The pie chart shows that 57.7% of students completed their workshops.
+But 12.3% were Incomplete and 6.8% Participated without finishing.
+Another 23.2% withdrew.
+That means over 42% of students didn’t finish their workshops.
+
+*H3.* Failure Trends Over Time Hypothesis: The frequency of unsuccessful outcomes (Incomplete, Complete) varies seasonally.
+This section studied whether failure — meaning "Incomplete" or "Participated" statuses — happens more in some seasons than others.
+A Chi-squared test showed a strong difference.
+The test result was significant, with a p-value much lower than 0.05.
+
+H₀ (Null): The distribution of unsuccessful outcomes (Incomplete, Complete) is the same across all seasons (or months).
+H₁ (Alternative): At least one season/month has a significantly higher failure rate (i.e., Incomplete or Participated).
+
+### Chi-square test: Failure types vs Season
+
+```{r asdfajshdfalskdf, echo=FALSE, warning=FALSE, message=FALSE}
+failure_season_table_df <- merged_df %>%
+  filter(PassStatus %in% c("Incomplete", "Participated"), !is.na(StartDate)) %>%
+  mutate(StartDate_parsed = as.Date(StartDate, format = "%d-%b-%y"),
+    month = month(StartDate_parsed),
+    Season = case_when(
+      month %in% c(12, 1, 2) ~ "Winter",
+      month %in% c(3, 4, 5)  ~ "Spring",
+      month %in% c(6, 7, 8)  ~ "Summer",
+      TRUE                   ~ "Fall")) %>%
+  filter(!is.na(Season)) %>%
+  count(Season, PassStatus) %>%
+  pivot_wider(names_from = PassStatus, values_from = n, values_fill = 0)
+failure_season_table <- as.data.frame(failure_season_table_df)
+rownames(failure_season_table) <- failure_season_table$Season
+failure_season_table$Season <- NULL
+failure_season_table <- as.matrix(failure_season_table)
+
+chisq_result_H3 <- chisq.test(failure_season_table)
+print(chisq_result_H3)
+
+if (chisq_result_H3$p.value < 0.05) {
+  cat("H is supported: Failure outcomes vary significantly by season.\n")
+} else {
+  cat("Fail to reject H: No significant seasonal trend in failure types.\n")
+}
+```
+
+### Registered VS Incomplete Students Over Time
+
+```{r registered_vs_incomplete_clean, echo=FALSE, warning=FALSE, message=FALSE}
+df_comp_tmp <- merged_df %>%
+  filter(!is.na(PassStatus), !is.na(StartDate)) %>%
+  mutate(StartDate_parsed = as.Date(StartDate, format = "%d-%b-%y"),
+    MonthYearDate = floor_date(StartDate_parsed, "month"),
+    MonthYearLabel = format(MonthYearDate, "%b %Y")) %>%
+  filter(!is.na(StartDate_parsed))
+chron_levels <- unique(format(sort(df_comp_tmp$MonthYearDate), "%b %Y"))
+
+df_comp <- df_comp_tmp %>%
+  mutate(MonthYearLabel = factor(MonthYearLabel, levels = chron_levels)) %>%
+  group_by(MonthYearLabel) %>%
+  summarise(TotalRegistered = n(), TotalIncomplete = sum(PassStatus == "Incomplete", na.rm = TRUE), .groups = "drop")
+df_comp %>%
+  pivot_longer(c(TotalRegistered, TotalIncomplete), names_to = "Group", values_to = "Count") %>%
+  ggplot(aes(x = MonthYearLabel, y = Count, fill = Group)) +
+  geom_col(position = "dodge") +
+  labs(title = "Registered vs Incomplete Students Over Time", x = "Month", y = "Count") +
+  theme_minimal() +
+  scale_x_discrete(drop = TRUE) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "right")
+```
+
+The bar chart "Registered vs Incomplete Students Over Time" highlights when these failures happened.
+The biggest spikes were in April, May, and September 2024, which match school transitions or exam seasons.
+In contrast, failure rates were low in June, July, and August — periods with fewer or no workshops.
+These seasonal patterns suggest that timing matters a lot.
+The center could reduce failure by offering shorter or more flexible workshops during high-risk months and by checking in with students more often during spring and early fall.
+
+*Student behavior follows a clear seasonal rhythm. Participation rises in spring, drops in summer, and stays steady during the school year. Skill interest changes over time. Withdrawals and failure rates rise during academic stress periods like May and September. And new students mostly join early in the year or after summer, while returning students drive most of the engagement later on.* \newpage
+
+```{r ddd,  echo=FALSE, warning=FALSE, message=FALSE}
+student_list2 <- read_csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
+perf2 <- read_csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+workshops2 <- read_csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
+
+student_list2 <- student_list2 %>% mutate(TumoID = as.character(TumoID))
+perf2 <- perf2 %>% mutate(TumoID = as.character(TumoID))
+workshops2 <- workshops2 %>% mutate(TumoID = as.character(TumoID))
+
+gender_lookup <- workshops2 %>%
+  select(TumoID, Gender) %>%
+  distinct(TumoID, .keep_all = TRUE)
+
+attendance_outcomes_df <- student_list2 %>%
+  select(TumoID, Age, PresenceRatio) %>%
+  left_join(gender_lookup, by = "TumoID") %>%
+  left_join(perf2 %>% select(TumoID, Completed, Incomplete, Withdrawn, Participated), by = "TumoID") %>%
+  mutate(PresenceRatio = str_replace_all(PresenceRatio, ",", "."),
+    PresenceRatio = as.numeric(str_extract(PresenceRatio, "\\d+(\\.\\d+)?")) / 100) %>%
+  select(TumoID, Gender, Age, PresenceRatio, Completed, Incomplete, Withdrawn, Participated)
+```
+
+### Attendance by Gender
+
+```{r asd,  echo=FALSE, warning=FALSE, message=FALSE}
+attendance_boxplot <- attendance_outcomes_df %>%
+  filter(!is.na(Gender), !is.na(PresenceRatio), PresenceRatio <= 1) %>%
+  mutate(Gender = case_when(
+    str_to_lower(str_trim(Gender)) %in% c("male", "m") ~ "Male",
+    str_to_lower(str_trim(Gender)) %in% c("female", "f") ~ "Female")) %>%
+  ggplot(aes(x = Gender, y = PresenceRatio, fill = Gender)) +
+  geom_boxplot(alpha = 0.8, color = "black") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_fill_manual(values = c("Male" = "#1f77b4", "Female" = "#e15759")) +
+  labs(title = "Attendance by Gender", x = "Gender", y = "Attendance (%)") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), legend.position = "none")
+
+attendance_jitter <- attendance_outcomes_df %>%
+  filter(!is.na(Gender), !is.na(PresenceRatio), PresenceRatio <= 1) %>%
+  mutate(Gender = case_when(
+    str_to_lower(str_trim(Gender)) %in% c("male", "m") ~ "Male",
+    str_to_lower(str_trim(Gender)) %in% c("female", "f") ~ "Female")) %>%
+  ggplot(aes(x = Gender, y = PresenceRatio, color = Gender)) +
+  geom_jitter(width = 0.2, size = 1.5, alpha = 0.1) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_color_manual(values = c("Male" = "#1f77b4", "Female" = "#e15759")) +
+  labs(title = "Individual Attendance Rates", x = "Gender", y = "Attendance (%)") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), legend.position = "none")
+
+attendance_boxplot + attendance_jitter
+```
+
+These two graphs show attendance percentages for students, grouped by gender.
+On the left part, you can see boxplots by which we can see that both medians of the genders are high, nearly 80-82%, so despite the gender, all the students have a high attendance rate; however, outliers are also a lot, and many students have a 25-50% participation rate.
+Females have a slightly higher median, which is why we can conclude that female students have more consistent attendance.
+Overall, there is no extreme gap between genders.
+On the right is the scatterplot for the individual attendances.
+Each dot represents one student, colored by gender.
+This gives a deeper look at how individual attendance varies.
+The densest part again was between 75-98 percent, and here we can see the attendance of each individual, unlike the box plot, which shows the summary of the attendance rates.
+
+There’s no obvious gap between male and female groups — both show very similar behavior.
+
+### Gender-Based Course Enrollment Analysis
+
+```{r cvcv, echo=FALSE, warning=FALSE, message=FALSE}
+enrollment_barplot <- attendance_outcomes_df %>%
+  filter(Gender %in% c("Male", "Female")) %>%
+  count(Gender) %>%
+  ggplot(aes(x = Gender, y = n, fill = Gender)) +
+  geom_col(width = 0.6) +
+  scale_fill_manual(values = c("Male" = "#1f77b4", "Female" = "#e15759")) +
+  labs(title = "Total Course Enrollments", x = "Gender", y = "Enrollments") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), legend.position = "none")
+
+courses_boxplot <- attendance_outcomes_df %>%
+  filter(!is.na(TumoID), Gender %in% c("Male", "Female")) %>%
+  count(TumoID, Gender) %>%
+  ggplot(aes(x = Gender, y = n, fill = Gender)) +
+  geom_boxplot(alpha = 0.8, color = "black") +
+  scale_fill_manual(values = c("Male" = "#1f77b4", "Female" = "#e15759")) +
+  labs(title = "Courses per Student", x = "Gender", y = "Courses") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), legend.position = "none")
+
+courses_jitter <- attendance_outcomes_df %>%
+  filter(!is.na(TumoID), Gender %in% c("Male", "Female")) %>%
+  count(TumoID, Gender) %>%
+  ggplot(aes(x = Gender, y = n, color = Gender)) +
+  geom_jitter(width = 0.2, alpha = 0.4, size = 1.5) +
+  scale_color_manual(values = c("Male" = "#1f77b4", "Female" = "#e15759")) +
+  labs(title = "Courses per Student", x = "Gender", y = "Courses") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), legend.position = "none")
+(enrollment_barplot | courses_boxplot) / courses_jitter
+```
+
+Here are three graphs: a bar chart, a box plot, and a scatterplot for the Course enrollments of the students.
+In the first graph, the bar chart, we can see that Males have a higher total enrollment (3000 total courses) than Female students (2200 total courses).
+The box plot shows that medians for the individual enrollments are nearly equal, with a tiny female domination.
+Each student, on average, took six courses.
+By scatterplot, we get a more detailed picture.
+A significant number of the students take between 1 and 2 courses, while others take 2-15 classes.
+Only a few students take 15 or more courses.
+Both genders have a similar concentration of students in the mid-range.
+Male students have slightly more variation, including more students who take over 20 courses.
+Overall, the patterns are comparable, with no huge gender differences.
+
+### Failure Rates by Age & Gender
+
+```{r fvfv, echo=FALSE, warning=FALSE, message=FALSE}
+failure_rate_by_age_gender <- attendance_outcomes_df %>%
+  filter(!is.na(Gender), !is.na(Age), !is.na(Participated), Participated > 0) %>%
+  filter((Incomplete + Withdrawn) <= Participated) %>%
+  mutate(failure_rate = (Incomplete + Withdrawn) / Participated) %>%
+  group_by(Gender, Age) %>%
+  summarise(mean_failure = mean(failure_rate, na.rm = TRUE), .groups = "drop")
+
+ggplot(failure_rate_by_age_gender, aes(x = Age, y = mean_failure, color = Gender)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1)) +
+  scale_color_manual(values = c("Male" = "#1f77b4", "Female" = "#e15759")) +
+  labs(title = "Failure Rates by Age and Gender", x = "Age", y = "Average Failure Rate") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), legend.title = element_blank())
+```
+
+This graph shows how average failure rates change across different ages and how those patterns differ by gender.
+Here we can see that failure rates increase with age, especially for male students.
+For younger students (12–15), failure rates are fairly close for both genders.
+Starting from age 16 and older, male failure rates spike significantly.
+At age 18 and 21, failure rate for males hits 100%, meaning every male student at those ages failed.
+Female failure rates stay more stable and lower compared to males.
+Even at older ages, it remains below 40%.
+So in all ages female students have more concentrated and consistent behaviour in studying than the male students.
+
+\newpage
+
+```{r ggb, echo=FALSE, warning=FALSE, message=FALSE}
+student_meta_B <- read_csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv") %>% clean_names()
+passed_what_B <- read_csv("Data/TUMO Yerevan Center Report_Who Passed What_Table - Sheet1.csv") %>% clean_names()
+workshops_B <- read_csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv") %>% clean_names()
+performance_B <- read_csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv") %>% clean_names()
+```
+
+```{r okok, echo=FALSE, warning=FALSE, message=FALSE}
+class_order_B <- c("None", "T", "U", "M", "O")
+student_meta_B <- student_meta_B %>%
+  mutate(classification = fct_explicit_na(classification, na_level = "None"), classification = factor(classification, levels = class_order_B, ordered = TRUE))
+
+performance_B <- performance_B %>%
+  mutate(classification = fct_explicit_na(classification, na_level = "None"), classification = factor(classification, levels = class_order_B, ordered = TRUE))
+
+age_breaks_B <- c(0, 12, 15, 18, 21, 25, Inf)
+age_labels_B <- c("<13", "13-14", "15-17", "18-20", "21-24", "25+")
+student_meta_B <- student_meta_B %>%
+  mutate(age_group = cut(age, breaks = age_breaks_B, labels = age_labels_B, right = FALSE))
+performance_B <- performance_B %>%
+  mutate(age_group = cut(age, breaks = age_breaks_B, labels = age_labels_B, right = FALSE))
+
+normalize_status_B <- function(x) {
+  case_when(
+    tolower(x) %in% c("active") ~ "Active",
+    tolower(x) %in% c("freeze") ~ "Freeze",
+    tolower(x) %in% c("preclosed") ~ "Preclosed",
+    tolower(x) %in% c("suspend") ~ "Suspend",
+    TRUE ~ x)}
+student_meta_B <- student_meta_B %>% mutate(status = normalize_status_B(status))
+performance_B <- performance_B %>% mutate(status = normalize_status_B(status))
+passed_what_B <- passed_what_B %>% rename(status = user_status) %>% mutate(status = normalize_status_B(status))
+
+workshops_B <- workshops_B %>%
+  clean_names() %>%
+  mutate(pass_status_norm_B = case_when(
+      tolower(coalesce(pass_status, "")) %in% c("complete", "completed") ~ "Completed",
+      tolower(coalesce(pass_status, "")) %in% c("incomplete") ~ "Incomplete",
+      tolower(coalesce(pass_status, "")) %in% c("withdrawn", "withdraw") ~ "Withdrawn",
+      tolower(coalesce(pass_status, "")) %in% c("participated") ~ "Participated",
+      TRUE ~ pass_status),
+    start_date_parsed_B = parse_date_time(start_date, orders = c("d-b-Y", "d-m-y", "mdy", "ymd", "BdY")),
+    end_date_parsed_B = parse_date_time(end_date, orders = c("d-b-Y", "d-m-y", "mdy", "ymd", "BdY")))
+```
+
+```{r gender, echo=FALSE, warning=FALSE, message=FALSE}
+gender_lookup_B <- workshops_B %>%
+  filter(!is.na(gender)) %>%
+  mutate(ordering_date_B = start_date_parsed_B) %>%
+  arrange(tumo_id, desc(ordering_date_B)) %>%
+  group_by(tumo_id) %>%
+  slice_head(n = 1) %>%
+  ungroup() %>%
+  select(tumo_id, gender = gender)
+
+performance_master_B <- student_meta_B %>%
+  select(tumo_id, classification, status, age, age_group, retention_grouped, present, presence_ratio, attending_since) %>%
+  left_join(performance_B %>% select(tumo_id, awarded, rejected, completed, incomplete, participated, withdrawn, learning_labs_completed), by = "tumo_id") %>%
+  left_join(passed_what_B %>% select(tumo_id, all_selection, selection_1:selection_4, session), by = "tumo_id") %>%
+  left_join(gender_lookup_B, by = "tumo_id") %>%
+  mutate(gender_B = factor(gender, levels = c("Male", "Female")),
+    completion_rate_B = if_else((completed + incomplete + withdrawn) > 0,
+                              completed / (completed + incomplete + withdrawn), NA_real_),
+    failure_rate_B = if_else((awarded + rejected) > 0,
+                           rejected / (awarded + rejected), NA_real_),
+    starred_completion_B = NA_real_)
+```
+
+```{r star, echo=FALSE, warning=FALSE, message=FALSE}
+star_weights_B <- workshops_B %>%
+  mutate(completed_flag_B = if_else(pass_status == "Completed", 1, 0), star_flag_B = if_else(tolower(star) %in% c("true", "TRUE", "True", "1"), 1, 0), weighted_B = completed_flag_B + 0.5 * star_flag_B) %>%
+  group_by(tumo_id) %>%
+  summarise(total_workshops_B = n(), raw_completions_B = sum(completed_flag_B), starred_bonus_B = sum(0.5 * star_flag_B),
+    weighted_completion_score_B = sum(weighted_B), .groups = "drop")
+
+performance_master_B <- performance_master_B %>%
+  left_join(star_weights_B, by = "tumo_id") %>%
+  mutate(weighted_completion_score_B = replace_na(weighted_completion_score_B, 0))
+performance_master_B <- performance_master_B %>%
+  mutate(presence_ratio_num_B = as.numeric(presence_ratio) / 100)
+```
+
+```{r plot1, echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(performance_master_B %>%
+    filter(
+      !is.na(presence_ratio_num_B),
+      gender_B %in% c("Male", "Female"),
+      classification != "None"),
+  aes(x = presence_ratio_num_B, y = 1, fill = gender_B)) +
+  ggridges::geom_density_ridges(alpha = 0.8, scale = 1.1) +
+  facet_grid(gender_B ~ classification) +
+  theme_minimal(base_size = 12) +
+  labs(title = "Engagement (Presence Ratio) by Gender and Classification", x = "Presence Ratio", y = NULL, fill = "Gender") +
+  scale_x_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), strip.text = element_text(face = "bold"), axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+The plot shows that most students—both male and female—have high presence ratios (around 75–100%), indicating strong engagement.
+Gender differences are minimal within each classification, as the distributions look similar.
+Some classifications (like “M” and “O”) have tighter peaks near high attendance, suggesting more consistent engagement, while others show slightly more spread.
+Very few students fall into low-engagement territory.
+
+```{r plot2, echo=FALSE, warning=FALSE, message=FALSE}
+counts_by_agegender_B <- performance_master_B %>%
+  filter(!is.na(weighted_completion_score_B), !is.na(gender_B), !is.na(age_group)) %>%
+  group_by(age_group, gender_B) %>%
+  summarise(n_B = n(), .groups = "drop") %>%
+  mutate(label_B = paste0("n=", n_B))
+
+ggplot(performance_master_B %>% filter(!is.na(weighted_completion_score_B), !is.na(gender_B), !is.na(age_group)),
+       aes(x = gender_B, y = weighted_completion_score_B, fill = gender_B)) +
+  geom_violin(alpha = 0.2, width = 0.9, color = NA, trim = TRUE) +
+  ggbeeswarm::geom_quasirandom(width = 0.3, alpha = 0.6, size = 2, shape = 21, stroke = 0.3, color = "black", dodge.width = 0.5) +
+  stat_summary(fun = median, geom = "point", shape = 23, size = 4, fill = "black", color = "white", position = position_nudge(x = 0)) +
+  facet_wrap(~ age_group, ncol = 3, scales = "free_y") +
+  scale_fill_viridis_d(option = "plasma", guide = FALSE) +
+  theme_minimal(base_size = 13) +
+  labs(title = "Weighted Completion Score by Gender and Age Group", x = "Gender", y = "Weighted Completion (Completed + 0.5★)") +
+  theme(strip.text = element_text(face = "bold"), axis.text.x = element_text(size = 12), panel.spacing = unit(0.8, "lines")) +
+  geom_text(data = counts_by_agegender_B,
+    aes(x = gender_B, y = -0.1 * max(performance_master_B$weighted_completion_score_B, na.rm = TRUE), label = label_B),
+    inherit.aes = FALSE, size = 3, fontface = "bold", vjust = 1, color = "black") +
+  coord_cartesian(clip = "off")
+```
+
+The plot shows weighted completion scores (completed + 0.5★) stratified by gender and age group.
+For the larger cohorts (13–14 and 15–17), males and females have broadly overlapping distributions with medians near each other, indicating little gender gap in completion when sample sizes are substantial.
+In the 18–20 group, females appear to have a slightly higher central tendency, but the difference is modest.
+The smaller samples in 21–24 and especially 25+ (notably the single male in 25+) make those panels unstable—interpret those with caution.
+Overall, completion performance is fairly comparable across gender within age bands, with no dramatic disparities.
+
+```{r plot4, echo=FALSE, warning=FALSE, message=FALSE}
+retention_levels_B <- c("0 Month", "0.1 - 0.5 Year", "0.5 - 1 Year", "1 - 1.5 Year", "1.5 - 2 Year", "2 - 2.5 Year", "2.5 - 3 Year", "3+ Year")
+performance_master_B <- performance_master_B %>%
+  mutate(retention_grouped = factor(retention_grouped, levels = retention_levels_B, ordered = TRUE),
+    classification = fct_explicit_na(classification, na_level = "None"))
+
+flow_alluvial_B <- performance_master_B %>%
+  filter(!is.na(gender_B), !is.na(classification), !is.na(retention_grouped)) %>%
+  count(gender_B, classification, retention_grouped, name = "n") %>%
+  group_by(gender_B) %>%
+  mutate(pct_within_gender_B = n / sum(n)) %>%
+  ungroup() %>%
+  filter(pct_within_gender_B >= 0.005)
+
+flow_stratum_labels_B <- flow_alluvial_B %>%
+  group_by(axis = "gender", x = gender_B) %>%
+  summarise(n_B = sum(n), .groups = "drop") %>% 
+  mutate(label_B = paste0(x, "\nN=", n_B))
+
+ggplot(flow_alluvial_B,
+       aes(axis1 = gender_B, axis2 = classification, axis3 = retention_grouped, y = n)) +
+  geom_alluvium(aes(fill = classification), width = 0.15, alpha = 0.8) +
+  geom_stratum(width = 0.15, color = "black", fill = "white") +
+  geom_label(stat = "stratum", aes(label = after_stat(stratum)), size = 2.1, fill = "white", label.size = 0.2) +
+  scale_x_discrete(labels = c("Gender", "Classification", "Retention Group"), expand = c(0.05, 0.05)) +
+  scale_y_continuous(name = "Number of Students", breaks = scales::pretty_breaks(n = 8), expand = expansion(mult = c(0, 0.05))) +
+  scale_fill_viridis_d(option = "plasma", name = "Classification") +
+  labs(title = "Flow of Students: Gender - Classification - Retention Group", y = "Number of Students") +
+  theme_minimal(base_size = 10)+
+  theme(axis.title.x = element_blank(), panel.grid.major.y = element_line(color = "grey90"), legend.position = "right") +
+  guides(fill = guide_legend(title.position = "top"))
+```
+
+The alluvial shows how students flow from gender into classification and then into retention cohorts.
+Most students (both male and female) end up in the “U” and “T” classifications, with substantial representation in mid-to-longer retention groups (e.g., 0.1–0.5 year and 0.5–1 year), suggesting moderate persistence.
+There’s no stark gender imbalance in the major flows, though the thickness of bands can hint at slight differences in how genders distribute across classifications.
+Lower classifications (like “M” and “O”) feed more into shorter retention spans, implying those groups tend to drop off sooner.
+
+\newpage
+
+This part is identifying age groups where both genders have enough data (at least two students and more than one unique weighted completion score) to make a meaningful comparison, then running Wilcoxon rank-sum tests within each of those age groups to see if the distribution of weighted completion scores differs by gender.
+In short: it’s a nonparametric subgroup analysis by age to detect gender gaps in weighted completion while guarding against spurious findings from multiple comparisons.
+
+```{r tests, echo=FALSE, warning=FALSE, message=FALSE}
+eligible_age_groups_B <- performance_master_B %>%
+  filter(!is.na(gender_B), !is.na(age_group), !is.na(weighted_completion_score_B)) %>%
+  group_by(age_group, gender_B) %>%
+  summarise(n_B = n(), unique_vals_B = n_distinct(weighted_completion_score_B), .groups = "drop") %>%
+  filter(n_B >= 2, unique_vals_B >= 2) %>%
+  group_by(age_group) %>%
+  filter(n() == 2) %>%
+  pull(age_group) %>%
+  unique()
+
+wilcox_tests_B <- performance_master_B %>%
+  filter(
+    !is.na(gender_B),
+    !is.na(age_group),
+    !is.na(weighted_completion_score_B),
+    age_group %in% eligible_age_groups_B
+  ) %>%
+  group_by(age_group) %>%
+  wilcox_test(weighted_completion_score_B ~ gender_B) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance()
+
+wilcox_tests_B
+```
+
+The Wilcoxon tests show highly significant gender differences in weighted completion score for the 13–14, 15–17, and 18–20 age groups (adjusted p’s ≪ 0.001, “\*\*\*\*”), but no evidence of a difference in 21–24 (adjusted p = 1, “ns”)—likely because that cell is tiny (n=31 vs n=6).
+Given the large sample sizes in the younger students, these results indicate a real shift in the distribution of completion scores between males and females there.
+
+```{r chisq, echo=FALSE, warning=FALSE, message=FALSE}
+withdrawal_cont_table_B <- performance_master_B %>%
+  mutate(withdrawn_flag_B = if_else(withdrawn > 0, "Yes", "No")) %>%
+  count(classification, withdrawn_flag_B) %>%
+  pivot_wider(names_from = withdrawn_flag_B, values_from = n, values_fill = 0)
+
+chisq_withdrawn_classification_B <- performance_master_B %>%
+  mutate(withdrawn_flag_B = if_else(withdrawn > 0, "Yes", "No")) %>%
+  select(classification, withdrawn_flag_B) %>%
+  table() %>%
+  chisq.test()
+
+chisq_withdrawn_classification_B
+```
+
+The chi-squared test shows a very strong association between classification and withdrawal status (X\^2 = 3313.2, df = 4, p \< 2.2e-16), so you can reject the null of independence—withdrawals are not evenly distributed across classifications.
+In other words, some classifications have disproportionately higher or lower withdrawal rates.
+
+\newpage
+
+```{r ghjk, echo=FALSE, warning=FALSE, message=FALSE}
+stud_perf_C <- read.csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+stud_info_C <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
+stud_info_C$TumoID <- as.numeric(stud_info_C$TumoID)
+options(scipen = 999) 
+```
+
+```{r jkl, echo=FALSE, warning=FALSE, message=FALSE}
+stud_perf_C$task_score_C <- round(stud_perf_C$Awarded / (stud_perf_C$Awarded + stud_perf_C$Rejected), 2)
+
+stud_perf_C$training_score_C <- round(stud_perf_C$Completed / (stud_perf_C$Incomplete + stud_perf_C$Participated +       
+        stud_perf_C$Withdrawn + stud_perf_C$Completed), 2)
+```
+
+### Hypothesis 6: Attendance correlates with student performance
+
+*Assumption:* Students with higher attendance are more likely to perform better (complete courses) compared to students with low attendance.
+Rationale: Students who are actively attending classes may engage more with the material, leading to better performance.
+
+```{r cvbn, echo=FALSE, warning=FALSE, message=FALSE}
+merged_C <- inner_join(stud_info_C, stud_perf_C, by = "TumoID")
+merged_C$attendance_ratio_C <- round(as.integer(merged_C$PresenceRatio) / 100, 2)
+```
+
+This section explores whether students who attend workshops more regularly tend to perform better in their tasks.
+To measure this, we compared each student’s attendance ratio with their task rating — the proportion of tasks they successfully completed.
+A first look at the relationship is provided by a scatterplot of Task Rating vs Attendance Ratio.
+
+```{r okij, echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(merged_C, aes(x = attendance_ratio_C, y = task_score_C)) +
+  geom_point() +
+  labs(title = "Task Rating vs Attendance Ratio", x = "Attendance (%)", y = "Task Rating (%)") +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+```
+
+This plot shows most students clustered in the upper-right corner, with both high attendance and high task ratings.
+However, there is noticeable spread, indicating that some students perform well even with lower attendance.
+To explore the pattern further, a regression line is added to the scatterplot.
+### Scatterplot: Presence Rate & Task Rating Trend
+
+```{r vgvgv, echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(merged_C, aes(x = attendance_ratio_C, y = task_score_C)) +
+  geom_point(color = "steelblue", size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "darkred", linewidth = 1) +
+  labs(
+    title = "Attendance vs Task Rating with Regression Trend Line",
+    x = "Attendance Ratio",
+    y = "Task Rating"
+  ) +
+  scale_x_continuous(breaks = seq(0, 1, 0.1)) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14), axis.title = element_text(face = "bold", size = 12), axis.text = element_text(size = 10))
+```
+
+The nearly flat slope suggests a weak linear relationship.
+
+```{r zxcv, echo=FALSE, warning=FALSE, message=FALSE}
+pairs(merged_C[, c("attendance_ratio_C", "task_score_C")],main = "Scatterplot Matrix")
+```
+
+A scatterplot matrix shows similar results — a loose pattern with a high concentration of students achieving strong results.
+For a more detailed statistical view, we examined both linear and monotonic correlations.
+The Pearson correlation testshowed a non-significant relationship (r = -0.017, p = 0.28), while the Spearman correlation revealed a weak but statistically significant trend (ρ = -0.055, p \< 0.001).
+To visualize this comparison, we included two plots showing trend lines — one for linear \### Linear Relationship: Presence Rate VS Task Rating
+
+```{r}
+spearman_corr_C <- cor.test(merged_C$attendance_ratio_C, merged_C$task_score_C,
+                            method = "spearman", exact = FALSE, use = "complete.obs")
+spearman_corr_C
+```
+
+### Monotonicity: Presence Rate VS Task Rating
+
+```{r}
+pearson_corr_C <- cor.test(merged_C$attendance_ratio_C, merged_C$task_score_C,
+                            method = "pearson", exact = FALSE, use = "complete.obs")
+pearson_corr_C
+```
+
+### Linearity and Monotonicity Plots
+
+```{r}
+plot_linear_C <- ggplot(merged_C, aes(x = attendance_ratio_C, y = task_score_C)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_smooth(method = "lm", se = TRUE, color = "darkred") +
+  labs(title = "Pearson Correlation (Linear)",
+       x = "Attendance Ratio",
+       y = "Task Rating") +
+  theme_minimal()
+plot_monotonic_C <- ggplot(merged_C, aes(x = attendance_ratio_C, y = task_score_C)) +
+  geom_point(alpha = 0.6, color = "darkgreen") +
+  geom_smooth(method = "loess", se = TRUE, color = "forestgreen") +
+  labs(title = "Spearman Correlation (Monotonic)",
+       x = "Attendance Ratio",
+       y = "Task Rating") +
+  theme_minimal()
+
+plot_linear_C + plot_monotonic_C
+```
+
+These plots suggest that while attendance alone is not a strong predictor of performance for most students, those with very low attendance — especially below 40% — are more likely to have reduced task ratings.
+Although the relationship is subtle, the Spearman result confirms that very low attendance is linked to lower success.
+
+### Hypothesis 7: Withdrawn students show different behavioral patterns than those who fail or complete courses.
+
+*Assumption:* They have distinct engagement traits (e.g., lower attendance or fewer tasks completed).
+Rationale: Withdrawals may stem from personal or motivational issues, reflected in measurable behavior.
+
+```{r}
+merged_C$primary_outcome_C <- case_when(
+  merged_C$Withdrawn > 0 ~ "Withdrawn",
+  merged_C$Completed > 0 ~ "Completed",
+  merged_C$Rejected > 0 ~ "Failed",
+  TRUE ~ "Other")
+```
+
+## T-Test: Withdrawn vs Completed
+
+```{r}
+t.test(attendance_ratio_C ~ primary_outcome_C, 
+       data = merged_C %>% filter(primary_outcome_C %in% c("Withdrawn", "Completed")))
+```
+
+## T-Test: Withdrawn vs Failed
+
+```{r}
+t.test(attendance_ratio_C ~ primary_outcome_C, 
+       data = merged_C %>% filter(primary_outcome_C %in% c("Withdrawn", "Failed")))
+```
+
+We grouped students by their main outcome: Completed, Failed, or Withdrawn.
+A two-sample t-test showed that students who withdrew had significantly lower average attendance than both the Completed and Failed groups.
+This confirms that low attendance is a clear pattern among withdrawn students.
+To explore behavioral differences further, we used Principal Component Analysis (PCA) to reduce the data and visualize patterns across all numeric variables.
+
+## Principal Component Analysis (PCA)
+
+Principal Component Analysis (PCA) reduces high-dimensional data into fewer dimensions by transforming correlated variables into uncorrelated components, where each component captures the maximum possible variance in the data.
+
+```{r}
+numeric_df_C <- merged_C %>%
+  select(where(is.numeric)) %>%
+  na.omit()
+
+outcome_group_C <- merged_C %>%
+  filter(complete.cases(select(., where(is.numeric)))) %>%
+  pull(primary_outcome_C)
+```
+
+#### We use prcomp() with centering and scaling to ensure equal weighting across features.
+
+```{r}
+pca_res_C <- prcomp(numeric_df_C, center = TRUE, scale. = TRUE)
+pca_df_C <- as.data.frame(pca_res_C$x)
+pca_df_C$OutcomeGroup_C <- outcome_group_C
+```
+
+## PCA Plot: First Two Principal Components
+
+```{r}
+ggplot(pca_df_C, aes(x = PC1, y = PC2, color = OutcomeGroup_C)) +
+  geom_point(alpha = 0.6, size = 1.5) +
+  labs(title = "PCA: First Two Principal Components", color = "Outcome Group") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+The PCA scatterplot shows students positioned by their first two principal components, with colors indicating their outcome group.
+Withdrawn students tend to cluster away from others, suggesting they have distinct engagement patterns.
+These findings suggest that withdrawal is not a random outcome.
+Students who withdraw often exhibit early warning signs — particularly low attendance — that separate them from other groups.
+Recognizing this allows educators and mentors to intervene earlier and offer support to at-risk students.

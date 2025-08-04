@@ -1,13 +1,25 @@
-libs <- c("shiny", "shinydashboard", "dplyr", "ggplot2", "readr", "tidyr", "stringr", "forcats", "lubridate", "broom", "janitor")
+#libs <- c("shiny", "shinydashboard", "dplyr", "ggplot2", "readr", "tidyr", "stringr", "forcats", "lubridate", "broom", "janitor")
 
-load_libraries <- function(libs){
-  sapply(libs, function(pkg){
-    if (!require(pkg, character.only = TRUE)) {
-      stop(paste("Package not found:", pkg))  
-    }
-  })
-}
-load_libraries(libs)
+#load_libraries <- function(libs){
+  #sapply(libs, function(pkg){
+  #  if (!require(pkg, character.only = TRUE)) {
+   #   stop(paste("Package not found:", pkg))  
+  #  }
+ # })
+#}
+#load_libraries(libs)
+
+library("shiny")
+library("shinydashboard")
+library("dplyr")
+library("ggplot2")
+library("readr")
+library("tidyr")
+library("stringr")
+library("forcats")
+library("lubridate")
+library("broom")
+library("janitor")
 
 
 ui <- dashboardPage(
@@ -27,13 +39,14 @@ ui <- dashboardPage(
   
   dashboardBody(
     tags$head(
-      tags$style(HTML("
+      tags$style(HTML(
+        "
       html, body {
-    height: 100%;
+    height: 100%  !important  ;
     overflow: hidden;
   }
   .content-wrapper {
-    height: calc(100vh - 80px);
+    height: 100vh;
     overflow-y: auto;
   }"))
   ),
@@ -155,14 +168,14 @@ server <- function(input, output) {
   
   
   output$age_distribution <- renderPlot({
-    ws <- read.csv("../Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv",
+    ws <- read.csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv",
                  stringsAsFactors=FALSE, na.strings=c("","NA")) %>%
     rename(Age=AgeTillStartDate) %>%
     mutate(TumoID=as.character(TumoID),
            Gender=factor(Gender),
            Age=as.numeric(Age))
   
-  si <- read.csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv",
+  si <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv",
                  stringsAsFactors=FALSE, na.strings=c("","NA")) %>%
     mutate(TumoID=as.character(TumoID),
            Classification=ifelse(is.na(Classification),"null",Classification),
@@ -186,14 +199,14 @@ server <- function(input, output) {
   
   output$classification_boxplot <- renderPlot({
     
-    ws <- read.csv("../Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv",
+    ws <- read.csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv",
                    stringsAsFactors=FALSE, na.strings=c("","NA")) %>%
       rename(Age = AgeTillStartDate) %>%
       mutate(TumoID = as.character(TumoID),
              Gender = factor(Gender),
              Age = as.numeric(Age))
     
-    si <- read.csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv",
+    si <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv",
                    stringsAsFactors=FALSE, na.strings=c("","NA")) %>%
       mutate(TumoID = as.character(TumoID),
              Classification = ifelse(is.na(Classification), "null", Classification),
@@ -218,10 +231,10 @@ server <- function(input, output) {
   
   # Dynamics and Learning Patterns
   output$workshop_enrollments <- renderPlot({
-    perf <- read_csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
-    who <- read_csv("../Data/TUMO Yerevan Center Report_Who Passed What_Table - Sheet1.csv")
-    list_df <- read_csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
-    workshops <- read_csv("../Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
+    perf <- read_csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+    who <- read_csv("Data/TUMO Yerevan Center Report_Who Passed What_Table - Sheet1.csv")
+    list_df <- read_csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
+    workshops <- read_csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
     
     perf <- perf %>% mutate(TumoID = as.character(TumoID))
     who <- who %>% mutate(TumoID = as.character(TumoID))
@@ -258,10 +271,10 @@ server <- function(input, output) {
   })
   
   output$skill_popularity <- renderPlot({
-    perf <- read_csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
-    who <- read_csv("../Data/TUMO Yerevan Center Report_Who Passed What_Table - Sheet1.csv")
-    list_df <- read_csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
-    workshops <- read_csv("../Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
+    perf <- read_csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+    who <- read_csv("Data/TUMO Yerevan Center Report_Who Passed What_Table - Sheet1.csv")
+    list_df <- read_csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
+    workshops <- read_csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
     
     perf <- perf %>% mutate(TumoID = as.character(TumoID))
     who <- who %>% mutate(TumoID = as.character(TumoID))
@@ -302,10 +315,10 @@ server <- function(input, output) {
   })
   
   output$course_outcomes_piechart <- renderPlot({
-    perf <- read_csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
-    who <- read_csv("../Data/TUMO Yerevan Center Report_Who Passed What_Table - Sheet1.csv")
-    list_df <- read_csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
-    workshops <- read_csv("../Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
+    perf <- read_csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+    who <- read_csv("Data/TUMO Yerevan Center Report_Who Passed What_Table - Sheet1.csv")
+    list_df <- read_csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
+    workshops <- read_csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
     
     perf <- perf %>% mutate(TumoID = as.character(TumoID))
     who <- who %>% mutate(TumoID = as.character(TumoID))
@@ -376,9 +389,9 @@ server <- function(input, output) {
   })
   
   output$attendance_double_chart <- renderPlot({
-    list <- read_csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
-    perf <- read_csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
-    work <- read_csv("../Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
+    list <- read_csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
+    perf <- read_csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+    work <- read_csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
     
     list <- list %>% mutate(TumoID = as.character(TumoID))
     perf <- perf %>% mutate(TumoID = as.character(TumoID))
@@ -430,9 +443,9 @@ server <- function(input, output) {
   })
   
   output$failure_rates_age_gender <- renderPlot({
-    list <- read_csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
-    perf <- read_csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
-    work <- read_csv("../Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
+    list <- read_csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv")
+    perf <- read_csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+    work <- read_csv("Data/TUMO Armenia Center Report_Workshops Statistics_Table.csv")
     
     list <- list %>% mutate(TumoID = as.character(TumoID))
     perf <- perf %>% mutate(TumoID = as.character(TumoID))
@@ -478,8 +491,8 @@ server <- function(input, output) {
   
   # Student Engagement & Perfromance
   output$scatterplot_presence_ratio <- renderPlot({
-    student_performance <- read.csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
-    student_info <- read.csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
+    student_performance <- read.csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+    student_info <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
 
     student_info$TumoID <- as.numeric(student_info$TumoID)
     options(scipen = 999) 
@@ -511,8 +524,8 @@ server <- function(input, output) {
   })
   
   output$corr_matrix_presence_taskrating <- renderPlot({
-    student_performance <- read.csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
-    student_info <- read.csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
+    student_performance <- read.csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+    student_info <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
     
     student_info$TumoID <- as.numeric(student_info$TumoID)
     options(scipen = 999) 
@@ -531,8 +544,8 @@ server <- function(input, output) {
   })
   
   output$linearity_monotonicty_test_double <- renderPlot({
-    student_performance <- read.csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
-    student_info <- read.csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
+    student_performance <- read.csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+    student_info <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
 
     student_info$TumoID <- as.numeric(student_info$TumoID)
     options(scipen = 999) 
@@ -570,8 +583,8 @@ server <- function(input, output) {
   })
   
   output$course_outcomes_bars_ratios <- renderPlot({
-    student_performance <- read.csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
-    student_info <- read.csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
+    student_performance <- read.csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+    student_info <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
     
     student_info$TumoID <- as.numeric(student_info$TumoID)
     options(scipen = 999) 
@@ -612,8 +625,8 @@ server <- function(input, output) {
   })
   
   output$pca_analytics <- renderPlot({
-    student_performance <- read.csv("../Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
-    student_info <- read.csv("../Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
+    student_performance <- read.csv("Data/TUMO Yerevan_Students Performance_Table - Sheet1.csv")
+    student_info <- read.csv("Data/TUMO Yerevan Center Report_Students List_Table - Sheet1.csv", colClasses = c("TumoID" = "character"))
 
     student_info$TumoID <- as.numeric(student_info$TumoID)
     options(scipen = 999) 
