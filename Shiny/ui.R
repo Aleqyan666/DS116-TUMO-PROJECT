@@ -40,17 +40,17 @@ ui <- dashboardPage(
   dashboardBody(
     tags$head(
       tags$style(HTML(
-        "
-      html, body {
-    height: 100%  !important  ;
-    overflow: hidden;
-  }
-  .content-wrapper {
-    height: 100vh;
-    overflow-y: auto;
-  }"))
+      "
+            html, body, .wrapper, .content-wrapper {
+        height: 100% !important;
+        min-height: 100% !important;
+      }
+      .content {
+        height: 100% !important;
+      }}
+      "))
   ),
-    
+  
     tabItems(
       tabItem(tabName = "home",  
               h1("Welcome to the TUMO Student Analytics Dashboard"),
