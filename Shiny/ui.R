@@ -32,8 +32,6 @@ ui <- dashboardPage(
       menuItem(" Dynamics & Learning Patterns", tabName = "student_dynamics", icon = icon("chart-line")),
       menuItem(" Attendance & Course Outcomes", tabName = "attendance_outcomes", icon = icon("calendar-check")),
       menuItem(" Engagement & Performance", tabName = "engagement_performance", icon = icon("layer-group"))
-      #,
-      #menuItem(" Performance Trends & Insights", tabName = "performance_trends_insights", icon = icon("chart-area"))
     )
   ),
   
@@ -89,7 +87,6 @@ ui <- dashboardPage(
                        plotOutput("age_distribution", height = "300px"))
       ),
       
-      # THEME 2 - Dynamics & Learning Patterns
       tabItem(tabName = "student_dynamics",
               h1("Dynamics & Learning Patterns"),
               h5("Trends in skill popularity, withdrawals, and student participation over time."),
@@ -107,7 +104,6 @@ ui <- dashboardPage(
                        plotOutput("course_outcomes_piechart", height = "300px"))
       ),
       
-      # THEME 3 - Attendance & Course Outcomes
       tabItem(tabName = "attendance_outcomes",
               h1("Attendance & Course Outcomes"),
               h5("Insights into student attendance, engagement, and course outcomes by age and gender."),

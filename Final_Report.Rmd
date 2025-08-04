@@ -14,6 +14,22 @@ editor_options:
     wrap: sentence
 ---
 
+\begin{titlepage}
+    \centering
+    {\Huge \textbf{DS116 / CS343} \par}
+    \vspace{1cm}
+    {\LARGE \textbf{Final Project} \par}
+    \vspace{1cm}
+    {\huge \textbf{Analysis of TUMO Student Data} \par}
+    \vspace{2cm}
+    {\large Rita Chamiyan, Hayk Alekyan, Aram Barkhudaryan, Gor Arutiunian, Hayk Grigoryan \par}
+    \vspace{1cm}
+    \textit{American University of Armenia\\Yerevan, Armenia}
+    \vfill
+    {\large August 4, 2025\par}
+\end{titlepage}
+\newpage
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   echo = FALSE,
@@ -45,23 +61,6 @@ library(rstatix)
 library(forcats)
 ```
 
-\begin{titlepage}
-    \centering
-    {\Huge \textbf{DS116 / CS343} \par}
-    \vspace{1cm}
-    {\LARGE \textbf{Final Project} \par}
-    \vspace{1cm}
-    {\huge \textbf{Analysis of TUMO Student Data} \par}
-    \vspace{2cm}
-    {\large Rita Chamiyan, Hayk Alekyan, Aram Barkhudaryan, Gor Arutiunian, Hayk Grigoryan \par}
-    \vspace{1cm}
-    \textit{American University of Armenia\\Yerevan, Armenia}
-    \vfill
-    {\large August 4, 2025\par}
-\end{titlepage}
-\newpage
-\tableofcontents
-\newpage
 
 # Abstract
 
